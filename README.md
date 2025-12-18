@@ -1,413 +1,131 @@
-# 24-Week Agentic AI Engineer Execution Plan
+Week 1 — LLM Foundations and Attention Mechanics
+
+Objective
+
+The objective of Week 1 was to establish a correct mental and implementation-level understanding of how modern Large Language Models work internally, focusing on attention and transformer fundamentals, and to translate that understanding into executable code artifacts.
+
+The emphasis was on:
+	•	Conceptual correctness over optimization
+	•	Understanding why architectures work, not just how to call APIs
+	•	Building minimal, inspectable code rather than production abstractions
+
+⸻
+
+Topics Covered
+
+1. Neural Network Refresher (Contextual)
+	•	Reviewed fundamentals of Artificial Neural Networks (ANNs)
+	•	Revisited Convolutional Neural Networks (CNNs) to contrast vision models vs language models
+	•	Identified why CNN/RNN-based approaches fail to scale for language modeling
+
+2. How Large Language Models Are Trained (Conceptual)
+	•	Understood LLMs as next-token prediction systems
+	•	Learned how large-scale text data is:
+	•	Collected
+	•	Cleaned
+	•	Tokenized
+	•	Used to create implicit supervision (no explicit labels)
+	•	Differentiated between:
+	•	Pretraining
+	•	Instruction tuning
+	•	RLHF (high-level understanding only)
 
-This document is a **project-first, execution-focused roadmap** to prepare for **GenAI / Agentic AI Engineer / AI Platform Engineer** roles by **end of May**.
+3. Attention Mechanism (Core Focus)
+	•	Developed intuition for self-attention
+	•	Understood the role of:
+	•	Queries (Q)
+	•	Keys (K)
+	•	Values (V)
+	•	Learned attention as a token interaction and routing mechanism, not memory or reasoning
+	•	Traced how attention determines which tokens influence the next-token prediction
 
-**Assumptions**
+Key takeaway:
 
-* Time commitment: ~10–12 hrs/week (avg)
-* Primary language: Python (with Java/Spring integration later)
-* Goal: Production-grade agentic systems (not ML research)
+Attention decides which tokens matter for the next token, not what the answer is.
 
----
+4. Transformer Architecture (Introductory)
+	•	Studied the transformer block at a high level:
+	•	Token embeddings
+	•	Positional information
+	•	Self-attention
+	•	Feed-forward layers
+	•	Residual connections and layer normalization
+	•	Understood differences between:
+	•	Encoder-only
+	•	Decoder-only (GPT-style)
+	•	Encoder–decoder architectures
+	•	Clarified why modern LLMs (ChatGPT, GPT-4, Claude) are decoder-only models
 
-## Execution Principles (Read First)
+⸻
 
-* Every week must produce **code, logs, metrics, or written analysis**
-* Prefer **1 evolving system** over many disconnected demos
-* Evaluation, cost, and failure analysis are first-class citizens
-* Books are **reference tools**, not cover-to-cover goals
+Code Artifacts Built
 
----
+Project: Attention Mechanism from Scratch
 
-# PHASE 1 — LLM CORE & TRANSFORMERS
+A minimal implementation of self-attention was built to validate understanding.
 
-**Weeks 1–4 | 8–10 hrs/week**
+Scope
+	•	Implemented attention using NumPy
+	•	Explicit computation of:
+	•	Query, Key, Value matrices
+	•	Dot-product attention
+	•	Softmax normalization
+	•	Weighted sum of values
+	•	Printed intermediate matrices to inspect behavior
 
-## Week 1 — Attention & Transformer Internals
+Purpose
+	•	Remove abstraction layers
+	•	Observe how attention weights change with inputs
+	•	Build intuition transferable to transformer-based systems
 
-**Hours**: 8–9
+Deliverables
+	•	attention.py
+	•	Console outputs showing:
+	•	Attention scores
+	•	Normalized weights
+	•	Final attended representations
 
-### Learn (3 hrs)
+⸻
 
-* Self-attention intuition (Q, K, V)
-* Dot-product attention
-* Masked self-attention
+Outcomes
 
-**Reading**
+By the end of Week 1:
+	•	Able to explain attention and transformers without equations
+	•	Able to trace:
 
-* Hands-On Large Language Models — Ch 1–2
-* NLP with Transformers — Ch 1
+tokens → embeddings → attention → output representation
 
-### Build (5–6 hrs)
 
-**Project: Attention From Scratch (NumPy)**
+	•	Understood why:
+	•	Transformers scale better than RNNs
+	•	Attention is the foundation of all modern LLM capabilities
+	•	External memory (RAG) is required despite large context windows
+	•	Produced executable code demonstrating attention mechanics
 
-Deliverables:
+⸻
 
-* `attention.py`
-* Q/K/V computation
-* Softmax + weighted sum
-* Printed intermediate matrices
+Key Learnings
+	•	LLMs do not “understand” text — they predict tokens probabilistically
+	•	Attention is a context-weighting mechanism, not intelligence
+	•	Architectural understanding is critical before building RAG or agents
+	•	Debugging AI systems requires knowing where failures originate (attention, context, data)
 
-**Done when**: You can explain attention without equations
+⸻
 
----
+Explicitly Deferred
 
-## Week 2 — Transformer Architecture (GPT)
+The following were intentionally not covered in Week 1:
+	•	Fine-tuning or training models
+	•	Prompt engineering techniques
+	•	Retrieval-Augmented Generation (RAG)
+	•	Agents or tool calling
+	•	Performance or optimization concerns
 
-**Hours**: 9–10
+These are addressed in subsequent weeks once foundational understanding is solid.
 
-### Learn (3–4 hrs)
+⸻
 
-* Encoder vs Decoder vs Decoder-only
-* Positional embeddings
-* Residuals + LayerNorm
+Status
 
-**Reading**
-
-* Hands-On LLMs — Ch 3–4
-* LLM Engineers Handbook — Architecture section
-
-### Build (6 hrs)
-
-**Project: Mini GPT Forward Pass**
-
-Deliverables:
-
-* `mini_gpt.py`
-* Token + positional embeddings
-* Single transformer block
-* Output logits
-
-**Done when**: You can trace token → logits end-to-end
-
----
-
-## Week 3 — How LLMs Are Trained (Conceptual)
-
-**Hours**: 8–9
-
-### Learn (3 hrs)
-
-* Pretraining vs fine-tuning
-* Instruction tuning
-* RLHF (high level)
-* Implicit labels
-
-**Reading**
-
-* Generative Deep Learning — Ch 1–2
-* AI Engineering — Ch 1
-
-### Build (5–6 hrs)
-
-**Project: HuggingFace GPT Walkthrough**
-
-Deliverables:
-
-* Load GPT-2
-* Tokenize text
-* Forward pass
-* Inspect loss
-
-**Done when**: Training pipeline makes conceptual sense
-
----
-
-## Week 4 — Prompting & LLM Control
-
-**Hours**: 8–10
-
-### Learn (2–3 hrs)
-
-* Prompt structure
-* Temperature / top-p
-* System vs user prompts
-
-**Reading**
-
-* LLM Engineers Handbook — Prompting section
-
-### Build (6–7 hrs)
-
-**Project: CLI LLM Playground**
-
-Deliverables:
-
-* CLI chat app
-* Temperature toggle
-* Token usage logging
-
-**Done when**: You can predict output behavior changes
-
----
-
-# PHASE 2 — RAG ENGINEERING
-
-**Weeks 5–10 | 10–12 hrs/week**
-
-## Week 5 — Embeddings & Vector Search
-
-**Hours**: 10
-
-### Learn (3 hrs)
-
-* Embeddings intuition
-* Cosine similarity
-* Chunking strategies
-
-**Reading**
-
-* Hands-On LLMs — Embeddings
-* AI Engineering — RAG intro
-
-### Build (7 hrs)
-
-**Project: Embedding Search Engine**
-
-Deliverables:
-
-* Document loader
-* Chunker
-* Embedding + cosine search
-
----
-
-## Week 6 — RAG v1 (Project #1 Start)
-
-**Hours**: 12
-
-### Build
-
-* Retrieval
-* Context injection
-* LLM answer generation
-
-Deliverables:
-
-* FastAPI `/query` endpoint
-
----
-
-## Week 7 — RAG Failure Handling
-
-**Hours**: 10
-
-### Learn (2 hrs)
-
-* Hallucination
-* Missing context
-
-**Reading**
-
-* AI Engineering — RAG failure modes
-
-### Build (8 hrs)
-
-* “I don’t know” responses
-* Source citations
-* Context window limits
-
----
-
-## Week 8 — RAG Evaluation
-
-**Hours**: 11
-
-### Build
-
-* 30 test queries
-* LLM-as-judge
-* Hallucination metrics
-
-Deliverables:
-
-* `evals.py`
-
----
-
-## Week 9 — RAG Cost & Performance
-
-**Hours**: 10
-
-### Build
-
-* Latency logging
-* Token cost tracking
-* Budget caps
-
----
-
-## Week 10 — RAG Productionization
-
-**Hours**: 12
-
-### Build
-
-* Dockerization
-* Structured logging
-* Error handling
-
-**Checkpoint**: Project #1 COMPLETE
-
----
-
-# PHASE 3 — AGENTIC SYSTEMS
-
-**Weeks 11–18 | 11–13 hrs/week**
-
-## Week 11 — Agent Fundamentals
-
-**Hours**: 10
-
-### Build (Project #2 Start)
-
-* ReAct loop
-* Tool calling
-
----
-
-## Week 12 — Tools & Function Calling
-
-**Hours**: 11
-
-### Build
-
-* Search tool
-* Calculator tool
-* RAG tool
-
----
-
-## Week 13 — Agent Orchestration
-
-**Hours**: 12
-
-### Build
-
-* LangGraph state machine
-* Conditional flows
-
----
-
-## Week 14 — Agent Observability
-
-**Hours**: 10
-
-### Build
-
-* Step-level traces
-* Decision logs
-
----
-
-## Week 15 — Agent Evaluation
-
-**Hours**: 12
-
-### Build
-
-* Task completion metrics
-* Tool correctness checks
-
----
-
-## Week 16 — Human-in-the-Loop
-
-**Hours**: 10
-
-### Build
-
-* Confidence threshold
-* Escalation logic
-
----
-
-## Week 17 — Multi-Agent Systems
-
-**Hours**: 12
-
-### Build
-
-* Manager + worker agents
-
----
-
-## Week 18 — Failure Analysis
-
-**Hours**: 10
-
-### Build
-
-* Intentional failure injection
-* `FAILURE_MODES.md`
-
-**Checkpoint**: Project #2 COMPLETE
-
----
-
-# PHASE 4 — CAPSTONE & INTERVIEW READINESS
-
-**Weeks 19–24 | 12–14 hrs/week**
-
-## Weeks 19–20 — Capstone Project (Project #3)
-
-**Hours**: 25–28 total
-
-**Domain Agent (Finance / Support)**
-
-* RAG
-* Agents
-* Evaluation
-* Cost tracking
-* Human-in-the-loop
-
----
-
-## Week 21 — Java / Spring Integration
-
-**Hours**: 12
-
-* Java API → Python agent
-* OR Spring AI RAG microservice
-
----
-
-## Week 22 — Deployment
-
-**Hours**: 14
-
-* AWS deployment
-* CI pipeline
-
----
-
-## Week 23 — System Design Prep
-
-**Hours**: 10
-
-* 5 agent system designs
-* Written answers
-
----
-
-## Week 24 — Polish & Apply
-
-**Hours**: 8–10
-
-* README polish
-* Demo videos
-* LinkedIn article
-
----
-
-# END STATE
-
-By end of May you will have:
-
-* 3 production-grade projects
-* Deep LLM & agent intuition
-* Evaluation & reliability mindset
-* Interview-ready system narratives
-
-This profile aligns directly with **GenAI Engineer / Agentic AI Engineer / AI Platform Engineer** roles.
+Week 1 completed successfully.
+Foundation established for moving into RAG engineering and applied LLM systems.
