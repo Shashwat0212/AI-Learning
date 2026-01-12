@@ -1,413 +1,236 @@
-# 24-Week Agentic AI Engineer Execution Plan
+# Week 4 — Prompting & LLM Control
 
-This document is a **project-first, execution-focused roadmap** to prepare for **GenAI / Agentic AI Engineer / AI Platform Engineer** roles by **end of May**.
-
-**Assumptions**
-
-* Time commitment: ~10–12 hrs/week (avg)
-* Primary language: Python (with Java/Spring integration later)
-* Goal: Production-grade agentic systems (not ML research)
+**Total Time Commitment:** 8–10 hours
+**Theme:** Controlling LLM behavior through prompts and decoding parameters
 
 ---
 
-## Execution Principles (Read First)
+## Learning Objectives (What You Should Be Able to Do by the End of the Week)
 
-* Every week must produce **code, logs, metrics, or written analysis**
-* Prefer **1 evolving system** over many disconnected demos
-* Evaluation, cost, and failure analysis are first-class citizens
-* Books are **reference tools**, not cover-to-cover goals
+By the end of Week 4, you should be able to:
 
----
+* Reason about LLM output *before* running a prompt
+* Explain why two prompts that look similar produce different outputs
+* Predict how changing decoding parameters (temperature, top-p) alters response style
+* Deliberately constrain or expand model behavior using system vs user prompts
+* Build a minimal but well-instrumented CLI playground for prompt experimentation
 
-# PHASE 1 — LLM CORE & TRANSFORMERS
-
-**Weeks 1–4 | 8–10 hrs/week**
-
-## Week 1 — Attention & Transformer Internals
-
-**Hours**: 8–9
-
-### Learn (3 hrs)
-
-* Self-attention intuition (Q, K, V)
-* Dot-product attention
-* Masked self-attention
-
-**Reading**
-
-* Hands-On Large Language Models — Ch 1–2
-* NLP with Transformers — Ch 1
-
-### Build (5–6 hrs)
-
-**Project: Attention From Scratch (NumPy)**
-
-Deliverables:
-
-* `attention.py`
-* Q/K/V computation
-* Softmax + weighted sum
-* Printed intermediate matrices
-
-**Done when**: You can explain attention without equations
+This week is about **developing intuition and control**, not adding new infrastructure.
 
 ---
 
-## Week 2 — Transformer Architecture (GPT)
+## Part 1 — Learn (2–3 hours)
 
-**Hours**: 9–10
+### 1. Prompt Structure (≈45–60 min)
 
-### Learn (3–4 hrs)
+Focus on how prompts are *interpreted*, not just written.
 
-* Encoder vs Decoder vs Decoder-only
-* Positional embeddings
-* Residuals + LayerNorm
+Key concepts to internalize:
 
-**Reading**
+* **Instruction vs context vs data** separation
+* Why explicit structure (bullet points, sections, delimiters) improves reliability
+* The difference between:
 
-* Hands-On LLMs — Ch 3–4
-* LLM Engineers Handbook — Architecture section
+  * Asking for information
+  * Assigning a role
+  * Constraining output format
 
-### Build (6 hrs)
+Study examples such as:
 
-**Project: Mini GPT Forward Pass**
+* Vague prompt vs structured prompt
+* Single-turn instruction vs multi-step instruction
+* Open-ended vs constrained outputs (lists, JSON, markdown)
 
-Deliverables:
+You should start asking yourself:
 
-* `mini_gpt.py`
-* Token + positional embeddings
-* Single transformer block
-* Output logits
-
-**Done when**: You can trace token → logits end-to-end
+> “What is the model *allowed* to do given this prompt?”
 
 ---
 
-## Week 3 — How LLMs Are Trained (Conceptual)
+### 2. Decoding Parameters: Temperature & Top-p (≈45–60 min)
 
-**Hours**: 8–9
+You already understand sampling from probability distributions—apply that intuition here.
 
-### Learn (3 hrs)
+Cover the following in detail:
 
-* Pretraining vs fine-tuning
-* Instruction tuning
-* RLHF (high level)
-* Implicit labels
+#### Temperature
 
-**Reading**
+* What temperature actually scales (logits, not probabilities)
+* Low temperature (≈0–0.3):
 
-* Generative Deep Learning — Ch 1–2
-* AI Engineering — Ch 1
+  * Deterministic
+  * Repetitive
+  * Conservative completions
+* High temperature (≈0.8–1.2):
 
-### Build (5–6 hrs)
+  * Diverse phrasing
+  * Creative but error-prone
 
-**Project: HuggingFace GPT Walkthrough**
+Think in terms of **entropy control**.
 
-Deliverables:
+#### Top-p (Nucleus Sampling)
 
-* Load GPT-2
-* Tokenize text
-* Forward pass
-* Inspect loss
+* How top-p truncates the probability mass
+* Why top-p + temperature is often better than top-k
+* Failure modes when top-p is too low or too high
 
-**Done when**: Training pipeline makes conceptual sense
+Mental model to adopt:
 
----
-
-## Week 4 — Prompting & LLM Control
-
-**Hours**: 8–10
-
-### Learn (2–3 hrs)
-
-* Prompt structure
-* Temperature / top-p
-* System vs user prompts
-
-**Reading**
-
-* LLM Engineers Handbook — Prompting section
-
-### Build (6–7 hrs)
-
-**Project: CLI LLM Playground**
-
-Deliverables:
-
-* CLI chat app
-* Temperature toggle
-* Token usage logging
-
-**Done when**: You can predict output behavior changes
+> Temperature shapes *sharpness*, top-p shapes *breadth*.
 
 ---
 
-# PHASE 2 — RAG ENGINEERING
+### 3. System vs User Prompts (≈30–45 min)
 
-**Weeks 5–10 | 10–12 hrs/week**
+Understand prompt hierarchy and control priority.
 
-## Week 5 — Embeddings & Vector Search
+Key ideas:
 
-**Hours**: 10
+* System prompt defines **behavioral boundaries**
+* User prompt defines **task intent**
+* Why system prompts are more stable than repeating instructions in user input
 
-### Learn (3 hrs)
+Examples to reason about:
 
-* Embeddings intuition
-* Cosine similarity
-* Chunking strategies
+* Persona enforcement ("You are a strict compiler")
+* Safety or formatting guarantees
+* Domain restriction ("Only answer using the provided context")
 
-**Reading**
+By the end of this section, you should be able to say:
 
-* Hands-On LLMs — Embeddings
-* AI Engineering — RAG intro
-
-### Build (7 hrs)
-
-**Project: Embedding Search Engine**
-
-Deliverables:
-
-* Document loader
-* Chunker
-* Embedding + cosine search
+> “This behavior belongs in the system prompt, not the user prompt.”
 
 ---
 
-## Week 6 — RAG v1 (Project #1 Start)
+## Reading (Integrated)
 
-**Hours**: 12
+**Primary Reading:**
 
-### Build
+* *LLM Engineer’s Handbook* — Prompting section
 
-* Retrieval
-* Context injection
-* LLM answer generation
+Read actively:
 
-Deliverables:
-
-* FastAPI `/query` endpoint
+* Rewrite example prompts in your own words
+* Note which parts are doing *control* vs *content*
+* Identify implicit assumptions made by the model
 
 ---
 
-## Week 7 — RAG Failure Handling
+## Part 2 — Build (6–7 hours)
 
-**Hours**: 10
+### Project: CLI LLM Playground
 
-### Learn (2 hrs)
-
-* Hallucination
-* Missing context
-
-**Reading**
-
-* AI Engineering — RAG failure modes
-
-### Build (8 hrs)
-
-* “I don’t know” responses
-* Source citations
-* Context window limits
+This is a **controlled experimentation environment**, not a product.
 
 ---
 
-## Week 8 — RAG Evaluation
+### Step 1 — Basic CLI Chat Loop (≈1–1.5 hrs)
 
-**Hours**: 11
+Requirements:
 
-### Build
+* Terminal-based chat interface
+* Persistent conversation loop
+* Clear separation of:
 
-* 30 test queries
-* LLM-as-judge
-* Hallucination metrics
+  * System prompt
+  * User input
+  * Model output
 
-Deliverables:
+Design decisions to make deliberately:
 
-* `evals.py`
+* Where the system prompt lives (config file vs hardcoded)
+* Whether conversation history is appended or summarized
 
----
+Deliverable:
 
-## Week 9 — RAG Cost & Performance
-
-**Hours**: 10
-
-### Build
-
-* Latency logging
-* Token cost tracking
-* Budget caps
+* You can chat continuously without restarting the program
 
 ---
 
-## Week 10 — RAG Productionization
+### Step 2 — Temperature Toggle (≈1–1.5 hrs)
 
-**Hours**: 12
+Add runtime control over temperature.
 
-### Build
+Requirements:
 
-* Dockerization
-* Structured logging
-* Error handling
+* CLI flag or interactive command to set temperature
+* Ability to change temperature mid-session
 
-**Checkpoint**: Project #1 COMPLETE
+Experiments to run:
+
+* Same prompt at temperatures: 0.2, 0.5, 0.9
+* Observe:
+
+  * Sentence length
+  * Word choice variability
+  * Error rate
+
+Document your observations in comments or a README.
 
 ---
 
-# PHASE 3 — AGENTIC SYSTEMS
+### Step 3 — Token Usage Logging (≈1–1.5 hrs)
 
-**Weeks 11–18 | 11–13 hrs/week**
+Instrument the system.
 
-## Week 11 — Agent Fundamentals
+Track at minimum:
 
-**Hours**: 10
+* Prompt tokens
+* Completion tokens
+* Total tokens per turn
 
-### Build (Project #2 Start)
+Optional (recommended):
 
-* ReAct loop
+* Tokens per second
+* Rolling averages per session
+
+Why this matters:
+
+* Cost awareness
+* Latency intuition
+* Prompt verbosity trade-offs
+
+You should be able to answer:
+
+> “Which part of my prompt is expensive?”
+
+---
+
+### Step 4 — Prompt Experiments (≈2–2.5 hrs)
+
+Use the playground to *systematically test behavior*.
+
+Suggested experiments:
+
+1. Same task, different system prompts
+2. Same prompt, different temperature
+3. Over-constrained vs under-constrained prompts
+4. Removing vs adding explicit output format
+
+Keep notes:
+
+* What surprised you?
+* What was unstable?
+* What became predictable?
+
+---
+
+## Done When (Exit Criteria)
+
+You are **done with Week 4** when:
+
+* You can predict output changes *before* running the prompt
+* You can justify why a response changed using:
+
+  * Prompt structure
+  * Temperature
+  * System vs user roles
+* Your CLI playground lets you test these hypotheses quickly
+
+This intuition is foundational for:
+
+* RAG grounding
 * Tool calling
+* Agent behavior control
 
----
-
-## Week 12 — Tools & Function Calling
-
-**Hours**: 11
-
-### Build
-
-* Search tool
-* Calculator tool
-* RAG tool
-
----
-
-## Week 13 — Agent Orchestration
-
-**Hours**: 12
-
-### Build
-
-* LangGraph state machine
-* Conditional flows
-
----
-
-## Week 14 — Agent Observability
-
-**Hours**: 10
-
-### Build
-
-* Step-level traces
-* Decision logs
-
----
-
-## Week 15 — Agent Evaluation
-
-**Hours**: 12
-
-### Build
-
-* Task completion metrics
-* Tool correctness checks
-
----
-
-## Week 16 — Human-in-the-Loop
-
-**Hours**: 10
-
-### Build
-
-* Confidence threshold
-* Escalation logic
-
----
-
-## Week 17 — Multi-Agent Systems
-
-**Hours**: 12
-
-### Build
-
-* Manager + worker agents
-
----
-
-## Week 18 — Failure Analysis
-
-**Hours**: 10
-
-### Build
-
-* Intentional failure injection
-* `FAILURE_MODES.md`
-
-**Checkpoint**: Project #2 COMPLETE
-
----
-
-# PHASE 4 — CAPSTONE & INTERVIEW READINESS
-
-**Weeks 19–24 | 12–14 hrs/week**
-
-## Weeks 19–20 — Capstone Project (Project #3)
-
-**Hours**: 25–28 total
-
-**Domain Agent (Finance / Support)**
-
-* RAG
-* Agents
-* Evaluation
-* Cost tracking
-* Human-in-the-loop
-
----
-
-## Week 21 — Java / Spring Integration
-
-**Hours**: 12
-
-* Java API → Python agent
-* OR Spring AI RAG microservice
-
----
-
-## Week 22 — Deployment
-
-**Hours**: 14
-
-* AWS deployment
-* CI pipeline
-
----
-
-## Week 23 — System Design Prep
-
-**Hours**: 10
-
-* 5 agent system designs
-* Written answers
-
----
-
-## Week 24 — Polish & Apply
-
-**Hours**: 8–10
-
-* README polish
-* Demo videos
-* LinkedIn article
-
----
-
-# END STATE
-
-By end of May you will have:
-
-* 3 production-grade projects
-* Deep LLM & agent intuition
-* Evaluation & reliability mindset
-* Interview-ready system narratives
-
-This profile aligns directly with **GenAI Engineer / Agentic AI Engineer / AI Platform Engineer** roles.
+Week 5 will assume you can *control* the model, not just talk to it.
