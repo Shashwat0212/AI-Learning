@@ -1,413 +1,295 @@
-# 24-Week Agentic AI Engineer Execution Plan
+# Week 5 — RAG Foundations & End-to-End System
 
-This document is a **project-first, execution-focused roadmap** to prepare for **GenAI / Agentic AI Engineer / AI Platform Engineer** roles by **end of May**.
+**Phase:** RAG Engineering
+**Hours:** ~18–20 (merged from original Weeks 5–7)
 
-**Assumptions**
-
-* Time commitment: ~10–12 hrs/week (avg)
-* Primary language: Python (with Java/Spring integration later)
-* Goal: Production-grade agentic systems (not ML research)
+This week consolidates **Embeddings & Vector Search**, **RAG v1**, and **Failure Handling** into a single, production-oriented milestone. By the end of the week, you will have a working **AskMyDocs RAG v1.5** system with safe failure behavior and source attribution.
 
 ---
 
-## Execution Principles (Read First)
+## 🎯 Objectives
 
-* Every week must produce **code, logs, metrics, or written analysis**
-* Prefer **1 evolving system** over many disconnected demos
-* Evaluation, cost, and failure analysis are first-class citizens
-* Books are **reference tools**, not cover-to-cover goals
+By the end of this week, you will have:
 
----
+* A semantic search engine using dense embeddings
+* A complete Retrieval-Augmented Generation (RAG) pipeline
+* Explicit handling for missing context and hallucinations
+* Source-aware answers with citations
+* A FastAPI `/query` endpoint suitable for local use
 
-# PHASE 1 — LLM CORE & TRANSFORMERS
-
-**Weeks 1–4 | 8–10 hrs/week**
-
-## Week 1 — Attention & Transformer Internals
-
-**Hours**: 8–9
-
-### Learn (3 hrs)
-
-* Self-attention intuition (Q, K, V)
-* Dot-product attention
-* Masked self-attention
-
-**Reading**
-
-* Hands-On Large Language Models — Ch 1–2
-* NLP with Transformers — Ch 1
-
-### Build (5–6 hrs)
-
-**Project: Attention From Scratch (NumPy)**
-
-Deliverables:
-
-* `attention.py`
-* Q/K/V computation
-* Softmax + weighted sum
-* Printed intermediate matrices
-
-**Done when**: You can explain attention without equations
+This is the **first shippable version** of AskMyDocs.
 
 ---
 
-## Week 2 — Transformer Architecture (GPT)
+## 🧠 Learn (4–5 hrs)
 
-**Hours**: 9–10
+### 1. Embeddings & Vector Search
 
-### Learn (3–4 hrs)
+Focus on embeddings as **semantic feature extractors**, analogous to frozen CNN backbones in vision.
 
-* Encoder vs Decoder vs Decoder-only
-* Positional embeddings
-* Residuals + LayerNorm
+Key concepts:
 
-**Reading**
+* Semantic geometry of embedding spaces
+* Cosine similarity vs dot product
+* Approximate vs exact nearest neighbor search
+* Embedding drift and corpus sensitivity
 
-* Hands-On LLMs — Ch 3–4
-* LLM Engineers Handbook — Architecture section
-
-### Build (6 hrs)
-
-**Project: Mini GPT Forward Pass**
-
-Deliverables:
-
-* `mini_gpt.py`
-* Token + positional embeddings
-* Single transformer block
-* Output logits
-
-**Done when**: You can trace token → logits end-to-end
+**Mental model**: retrieval quality dominates generation quality.
 
 ---
 
-## Week 3 — How LLMs Are Trained (Conceptual)
+### 2. Chunking Strategies
 
-**Hours**: 8–9
+Chunking is a bias–variance tradeoff.
 
-### Learn (3 hrs)
+Study:
 
-* Pretraining vs fine-tuning
-* Instruction tuning
-* RLHF (high level)
-* Implicit labels
+* Fixed-size chunking
+* Recursive / structure-aware chunking
+* Overlap tuning
+* Metadata propagation (file, page, section)
 
-**Reading**
+Rule of thumb:
 
-* Generative Deep Learning — Ch 1–2
-* AI Engineering — Ch 1
-
-### Build (5–6 hrs)
-
-**Project: HuggingFace GPT Walkthrough**
-
-Deliverables:
-
-* Load GPT-2
-* Tokenize text
-* Forward pass
-* Inspect loss
-
-**Done when**: Training pipeline makes conceptual sense
+> If a chunk answers more than one question, it is too large.
+> If it answers none, it is too small.
 
 ---
 
-## Week 4 — Prompting & LLM Control
+### 3. RAG Failure Modes
 
-**Hours**: 8–10
+Understand why RAG systems fail *silently* if not designed carefully.
 
-### Learn (2–3 hrs)
+Failure modes:
 
-* Prompt structure
-* Temperature / top-p
-* System vs user prompts
+* Hallucination under low-recall retrieval
+* Confident answers with missing context
+* Context window overflow
+* Irrelevant top-k retrieval
 
-**Reading**
+Design principle:
 
-* LLM Engineers Handbook — Prompting section
-
-### Build (6–7 hrs)
-
-**Project: CLI LLM Playground**
-
-Deliverables:
-
-* CLI chat app
-* Temperature toggle
-* Token usage logging
-
-**Done when**: You can predict output behavior changes
+> Silence is better than fiction.
 
 ---
 
-# PHASE 2 — RAG ENGINEERING
+## 🛠️ Build (14–15 hrs)
 
-**Weeks 5–10 | 10–12 hrs/week**
+### Project: **AskMyDocs — RAG v1**
 
-## Week 5 — Embeddings & Vector Search
-
-**Hours**: 10
-
-### Learn (3 hrs)
-
-* Embeddings intuition
-* Cosine similarity
-* Chunking strategies
-
-**Reading**
-
-* Hands-On LLMs — Embeddings
-* AI Engineering — RAG intro
-
-### Build (7 hrs)
-
-**Project: Embedding Search Engine**
-
-Deliverables:
-
-* Document loader
-* Chunker
-* Embedding + cosine search
+You will incrementally assemble a full RAG pipeline.
 
 ---
 
-## Week 6 — RAG v1 (Project #1 Start)
+## 🧩 System Architecture
 
-**Hours**: 12
-
-### Build
-
-* Retrieval
-* Context injection
-* LLM answer generation
-
-Deliverables:
-
-* FastAPI `/query` endpoint
-
----
-
-## Week 7 — RAG Failure Handling
-
-**Hours**: 10
-
-### Learn (2 hrs)
-
-* Hallucination
-* Missing context
-
-**Reading**
-
-* AI Engineering — RAG failure modes
-
-### Build (8 hrs)
-
-* “I don’t know” responses
-* Source citations
-* Context window limits
+```
+User Query
+   ↓
+Embed Query
+   ↓
+Vector Store Search (top-k)
+   ↓
+Context Assembly
+   ↓
+LLM Generation
+   ↓
+Answer + Sources OR "I don't know"
+```
 
 ---
 
-## Week 8 — RAG Evaluation
+## 🔨 Implementation Tasks
 
-**Hours**: 11
+### 1. Document Loader
 
-### Build
+* Load PDFs / markdown / text files
+* Preserve metadata:
 
-* 30 test queries
-* LLM-as-judge
-* Hallucination metrics
+  * filename
+  * page number
+  * section (if available)
 
-Deliverables:
-
-* `evals.py`
-
----
-
-## Week 9 — RAG Cost & Performance
-
-**Hours**: 10
-
-### Build
-
-* Latency logging
-* Token cost tracking
-* Budget caps
+**Deliverable**
+`load_documents() -> (text, metadata)[]`
 
 ---
 
-## Week 10 — RAG Productionization
+### 2. Chunker
 
-**Hours**: 12
+* Chunk size: ~300–500 tokens
+* Overlap: 10–20%
+* Attach metadata to each chunk
 
-### Build
-
-* Dockerization
-* Structured logging
-* Error handling
-
-**Checkpoint**: Project #1 COMPLETE
+**Deliverable**
+`chunk_documents(docs) -> chunks[]`
 
 ---
 
-# PHASE 3 — AGENTIC SYSTEMS
+### 3. Embedding + Vector Store
 
-**Weeks 11–18 | 11–13 hrs/week**
+* Generate embeddings for all chunks
+* Store vectors + metadata
+* Implement cosine similarity search
 
-## Week 11 — Agent Fundamentals
+**Deliverables**
 
-**Hours**: 10
-
-### Build (Project #2 Start)
-
-* ReAct loop
-* Tool calling
+* `index_chunks(chunks)`
+* `search(query, top_k=5)`
 
 ---
 
-## Week 12 — Tools & Function Calling
+### 4. Retrieval Layer
 
-**Hours**: 11
+* Embed user query
+* Retrieve top-k chunks
+* Apply a **minimum similarity threshold**
 
-### Build
+Hard rule:
 
-* Search tool
-* Calculator tool
-* RAG tool
+```
+If no chunk passes threshold → no answer
+```
 
----
-
-## Week 13 — Agent Orchestration
-
-**Hours**: 12
-
-### Build
-
-* LangGraph state machine
-* Conditional flows
+**Deliverable**
+`retrieve_context(query) -> chunks[]`
 
 ---
 
-## Week 14 — Agent Observability
+### 5. Context Injection
 
-**Hours**: 10
+* Concatenate retrieved chunks
+* Enforce maximum token budget
+* Preserve source boundaries
 
-### Build
-
-* Step-level traces
-* Decision logs
-
----
-
-## Week 15 — Agent Evaluation
-
-**Hours**: 12
-
-### Build
-
-* Task completion metrics
-* Tool correctness checks
+**Deliverable**
+`build_context(chunks) -> prompt_context`
 
 ---
 
-## Week 16 — Human-in-the-Loop
+### 6. LLM Answer Generation
 
-**Hours**: 10
+* Instruction constraints:
 
-### Build
+  * Answer **only** from provided context
+  * Say "I don’t know" if information is insufficient
+* Temperature ≤ 0.3
 
-* Confidence threshold
-* Escalation logic
-
----
-
-## Week 17 — Multi-Agent Systems
-
-**Hours**: 12
-
-### Build
-
-* Manager + worker agents
+**Deliverable**
+`generate_answer(query, context)`
 
 ---
 
-## Week 18 — Failure Analysis
+### 7. Failure Handling (Merged from Week 7)
 
-**Hours**: 10
+Implement explicit safeguards.
 
-### Build
+#### a. “I Don’t Know” Responses
 
-* Intentional failure injection
-* `FAILURE_MODES.md`
+Trigger when:
 
-**Checkpoint**: Project #2 COMPLETE
+* No retrieved chunk exceeds similarity threshold
+* Context length is below a minimum viable token count
 
----
+#### b. Source Citations
 
-# PHASE 4 — CAPSTONE & INTERVIEW READINESS
+* Every answer must list its source documents
+* No sources → no answer
 
-**Weeks 19–24 | 12–14 hrs/week**
+#### c. Context Window Limits
 
-## Weeks 19–20 — Capstone Project (Project #3)
-
-**Hours**: 25–28 total
-
-**Domain Agent (Finance / Support)**
-
-* RAG
-* Agents
-* Evaluation
-* Cost tracking
-* Human-in-the-loop
+* Hard cap context size
+* Drop lowest-similarity chunks first
 
 ---
 
-## Week 21 — Java / Spring Integration
+### 8. API Layer
 
-**Hours**: 12
+Expose the system via FastAPI.
 
-* Java API → Python agent
-* OR Spring AI RAG microservice
+**Endpoint**
 
----
+```
+POST /query
+```
 
-## Week 22 — Deployment
+**Response schema**
 
-**Hours**: 14
-
-* AWS deployment
-* CI pipeline
-
----
-
-## Week 23 — System Design Prep
-
-**Hours**: 10
-
-* 5 agent system designs
-* Written answers
+```json
+{
+  "answer": "...",
+  "sources": [
+    {"file": "...", "page": 12}
+  ]
+}
+```
 
 ---
 
-## Week 24 — Polish & Apply
+## ✅ Deliverables Checklist
 
-**Hours**: 8–10
-
-* README polish
-* Demo videos
-* LinkedIn article
+* [ ] Document loader with metadata
+* [ ] Chunking strategy implemented
+* [ ] Embedding + vector search
+* [ ] Retrieval with similarity threshold
+* [ ] Context-aware generation
+* [ ] “I don’t know” handling
+* [ ] Source citations
+* [ ] FastAPI `/query` endpoint
+* [ ] README with usage instructions
 
 ---
 
-# END STATE
+## 🧪 Validation Tests
 
-By end of May you will have:
+Manually test:
 
-* 3 production-grade projects
-* Deep LLM & agent intuition
-* Evaluation & reliability mindset
-* Interview-ready system narratives
+1. Question clearly answered by docs → correct answer + sources
+2. Question not in docs → “I don’t know”
+3. Ambiguous question → partial answer + sources
+4. Irrelevant question → no hallucination
 
-This profile aligns directly with **GenAI Engineer / Agentic AI Engineer / AI Platform Engineer** roles.
+---
+
+## 📚 Study References (From Your Provided PDFs)
+
+Use these **selectively**, not cover-to-cover.
+
+### Core RAG & Embeddings
+
+* **Hands-On Large Language Models** (Alammar & Grootendorst)
+
+  * Chapters on *Embeddings*, *Semantic Search*, and *Retrieval-Augmented Generation*
+  * Use for intuition on dense retrieval and cosine similarity
+
+* **Natural Language Processing with Transformers** (Tunstall, von Werra, Wolf)
+
+  * Chapters on *Semantic Search* and *Question Answering*
+  * Practical grounding in embedding-based retrieval pipelines
+
+---
+
+### RAG System Design & Failure Modes
+
+* **LLM Engineer’s Handbook** (Iusztin & Labonne)
+
+  * Sections on *RAG Pipelines* and *Production Guardrails*
+  * Focus on failure handling, retrieval thresholds, and safe defaults
+
+* **Hands-On Generative AI with Transformers and Diffusion Models**
+
+  * Sections discussing *LLM applications* and *retrieval-based augmentation*
+  * Useful for understanding where generation ends and retrieval must take over
+
+---
+
+### Conceptual Foundations (Optional Refresh)
+
+* **Machine Learning: A Probabilistic Perspective** (Kevin Murphy)
+
+  * Review similarity metrics and high-dimensional geometry (intuition only)
+
+* **Generative Deep Learning** (David Foster)
+
+  * Chapters on Transformers and representation learning
+  * Helps frame embeddings as learned manifolds
