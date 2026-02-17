@@ -1,413 +1,251 @@
-# 24-Week Agentic AI Engineer Execution Plan
+# RAG Engineering Execution Plan (Current Status + March Roadmap)
 
-This document is a **project-first, execution-focused roadmap** to prepare for **GenAI / Agentic AI Engineer / AI Platform Engineer** roles by **end of May**.
+## Progress Status (Based on Original 24-Week Plan)
 
-**Assumptions**
+The following components from the original 24-week roadmap have already been completed:
 
-* Time commitment: ~10–12 hrs/week (avg)
-* Primary language: Python (with Java/Spring integration later)
-* Goal: Production-grade agentic systems (not ML research)
+### Completed (Old Plan Weeks 1–5)
 
----
+* Transformer fundamentals (attention, GPT internals)
+* LLM training concepts (pretraining, fine-tuning, RLHF – conceptual)
+* Prompt engineering and LLM control
+* Embeddings and vector similarity fundamentals
+* Lightweight RAG v1 implementation (basic embedding search + context injection)
 
-## Execution Principles (Read First)
+Outcome of Weeks 1–5:
 
-* Every week must produce **code, logs, metrics, or written analysis**
-* Prefer **1 evolving system** over many disconnected demos
-* Evaluation, cost, and failure analysis are first-class citizens
-* Books are **reference tools**, not cover-to-cover goals
-
----
-
-# PHASE 1 — LLM CORE & TRANSFORMERS
-
-**Weeks 1–4 | 8–10 hrs/week**
-
-## Week 1 — Attention & Transformer Internals
-
-**Hours**: 8–9
-
-### Learn (3 hrs)
-
-* Self-attention intuition (Q, K, V)
-* Dot-product attention
-* Masked self-attention
-
-**Reading**
-
-* Hands-On Large Language Models — Ch 1–2
-* NLP with Transformers — Ch 1
-
-### Build (5–6 hrs)
-
-**Project: Attention From Scratch (NumPy)**
-
-Deliverables:
-
-* `attention.py`
-* Q/K/V computation
-* Softmax + weighted sum
-* Printed intermediate matrices
-
-**Done when**: You can explain attention without equations
+* Clear understanding that context quality > model size for local systems
+* Initial lightweight RAG prototype built
+* Conceptual clarity on retrieval vs generation trade-offs
 
 ---
 
-## Week 2 — Transformer Architecture (GPT)
+## Execution Plan Until End of March (6-Week Intensive Build)
 
-**Hours**: 9–10
+Time Remaining: 6 Weeks
+Goal: Move from architecture definition → production-hardened, load-tested RAG backend
 
-### Learn (3–4 hrs)
+Scope Compression Strategy:
 
-* Encoder vs Decoder vs Decoder-only
-* Positional embeddings
-* Residuals + LayerNorm
-
-**Reading**
-
-* Hands-On LLMs — Ch 3–4
-* LLM Engineers Handbook — Architecture section
-
-### Build (6 hrs)
-
-**Project: Mini GPT Forward Pass**
-
-Deliverables:
-
-* `mini_gpt.py`
-* Token + positional embeddings
-* Single transformer block
-* Output logits
-
-**Done when**: You can trace token → logits end-to-end
+* Combine logically related modules per week
+* Parallelize evaluation + instrumentation early
+* Defer non-critical optimizations
+* Focus strictly on production-grade RAG (no agent features)
 
 ---
 
-## Week 3 — How LLMs Are Trained (Conceptual)
-
-**Hours**: 8–9
-
-### Learn (3 hrs)
-
-* Pretraining vs fine-tuning
-* Instruction tuning
-* RLHF (high level)
-* Implicit labels
-
-**Reading**
-
-* Generative Deep Learning — Ch 1–2
-* AI Engineering — Ch 1
-
-### Build (5–6 hrs)
-
-**Project: HuggingFace GPT Walkthrough**
-
-Deliverables:
-
-* Load GPT-2
-* Tokenize text
-* Forward pass
-* Inspect loss
-
-**Done when**: Training pipeline makes conceptual sense
+# 6-WEEK EXECUTION ROADMAP
 
 ---
 
-## Week 4 — Prompting & LLM Control
+# WEEK 1 — ARCHITECTURE + INGESTION + INDEXING
 
-**Hours**: 8–10
+Study (6–8 hrs)
 
-### Learn (2–3 hrs)
+* Hybrid retrieval design patterns
+* FAISS (HNSW vs Flat)
+* Structure-aware chunking
 
-* Prompt structure
-* Temperature / top-p
-* System vs user prompts
+Build Objectives
 
-**Reading**
+* Finalize ARCHITECTURE.md
+* Define strict latency budget allocation
+* Implement document loader
+* Implement structure-aware chunking
+* Generate embeddings
+* Build vector index (FAISS/HNSW)
+* Build BM25 index
 
-* LLM Engineers Handbook — Prompting section
+Deliverables
 
-### Build (6–7 hrs)
+* ARCHITECTURE.md
+* LATENCY_BUDGET.md
+* ingestion/loader.py
+* ingestion/chunker.py
+* retrieval/vector_index.py
+* retrieval/bm25_index.py
+* Index benchmark script (records build time + retrieval latency)
 
-**Project: CLI LLM Playground**
+Branch: week01-architecture-indexing
 
-Deliverables:
-
-* CLI chat app
-* Temperature toggle
-* Token usage logging
-
-**Done when**: You can predict output behavior changes
-
----
-
-# PHASE 2 — RAG ENGINEERING
-
-**Weeks 5–10 | 10–12 hrs/week**
-
-## Week 5 — Embeddings & Vector Search
-
-**Hours**: 10
-
-### Learn (3 hrs)
-
-* Embeddings intuition
-* Cosine similarity
-* Chunking strategies
-
-**Reading**
-
-* Hands-On LLMs — Embeddings
-* AI Engineering — RAG intro
-
-### Build (7 hrs)
-
-**Project: Embedding Search Engine**
-
-Deliverables:
-
-* Document loader
-* Chunker
-* Embedding + cosine search
+Prompt
+"I have finalized architecture and latency budgets. I want to implement ingestion, structure-aware chunking, and dual indexing (FAISS + BM25) with benchmarking instrumentation included from day one."
 
 ---
 
-## Week 6 — RAG v1 (Project #1 Start)
+# WEEK 2 — HYBRID RETRIEVAL + METADATA FILTERING + BASIC EVAL
 
-**Hours**: 12
+Study (6–8 hrs)
 
-### Build
+* Reciprocal Rank Fusion (RRF)
+* Retrieval metrics (Recall@k, MRR)
 
-* Retrieval
-* Context injection
-* LLM answer generation
+Build Objectives
 
-Deliverables:
+* Implement metadata filtering
+* Implement RRF-based hybrid retrieval
+* Build retrieval evaluation harness
+* Create 20–30 golden retrieval queries
 
-* FastAPI `/query` endpoint
+Deliverables
 
----
+* retrieval/metadata_filter.py
+* retrieval/fusion.py
+* evaluation/retrieval_eval.py
+* evaluation/golden_queries.json
+* Recall@5 and Recall@10 report
 
-## Week 7 — RAG Failure Handling
+Branch: week02-hybrid-retrieval
 
-**Hours**: 10
-
-### Learn (2 hrs)
-
-* Hallucination
-* Missing context
-
-**Reading**
-
-* AI Engineering — RAG failure modes
-
-### Build (8 hrs)
-
-* “I don’t know” responses
-* Source citations
-* Context window limits
+Prompt
+"Vector and BM25 indexes are implemented. I want to add metadata filtering, hybrid retrieval with RRF, and measure Recall@k using a golden dataset."
 
 ---
 
-## Week 8 — RAG Evaluation
+# WEEK 3 — RERANKING + CONTEXT BUILDER + TOKEN CONTROL
 
-**Hours**: 11
+Study (6–8 hrs)
 
-### Build
+* Cross-encoder reranking
+* Extractive compression techniques
+* Token budgeting strategies
 
-* 30 test queries
-* LLM-as-judge
-* Hallucination metrics
+Build Objectives
 
-Deliverables:
+* Integrate cross-encoder reranker
+* Implement conditional gating based on score gap
+* Implement deduplication
+* Implement clustering by section
+* Implement extractive compression
+* Enforce strict token limits
 
-* `evals.py`
+Deliverables
+
+* reranker/cross_encoder.py
+* reranker/gating.py
+* context/deduplicate.py
+* context/cluster.py
+* context/compress.py
+* context/pack.py
+* nDCG comparison + latency impact report
+
+Branch: week03-rerank-context
+
+Prompt
+"Hybrid retrieval is working. I want to add selective reranking and a context builder that deduplicates, clusters, compresses, and respects strict token budgets while tracking latency overhead."
 
 ---
 
-## Week 9 — RAG Cost & Performance
+# WEEK 4 — LOCAL LLM INFERENCE + FULL PIPELINE INTEGRATION
 
-**Hours**: 10
+Study (6–8 hrs)
 
-### Build
+* llama.cpp integration
+* Quantization trade-offs
+* Tokens/sec benchmarking
 
-* Latency logging
-* Token cost tracking
-* Budget caps
+Build Objectives
+
+* Integrate GGUF inference runtime
+* Benchmark 3–5 small models
+* Select baseline model
+* Integrate full RAG pipeline end-to-end
+* Add stage-level timing hooks
+
+Deliverables
+
+* llm/runner.py
+* model_benchmark.py
+* Full pipeline script (query → answer)
+* Model comparison table
+
+Branch: week04-llm-integration
+
+Prompt
+"Retrieval, reranking, and context builder are implemented. I want to integrate a quantized local LLM, benchmark small models, and run the full pipeline end-to-end with stage timing."
 
 ---
 
-## Week 10 — RAG Productionization
+# WEEK 5 — OBSERVABILITY + REGRESSION EVALUATION + CACHING
 
-**Hours**: 12
+Study (6–8 hrs)
 
-### Build
-
-* Dockerization
+* p50 vs p95 measurement
 * Structured logging
-* Error handling
+* LRU caching strategies
 
-**Checkpoint**: Project #1 COMPLETE
+Build Objectives
 
----
+* Implement stage-level timers
+* Track rolling p50/p95
+* Implement structured JSON logging
+* Expand golden queries to 30–50
+* Add answer-level evaluation (citation checks)
+* Implement retrieval-level cache
+* Implement optional answer cache
 
-# PHASE 3 — AGENTIC SYSTEMS
+Deliverables
 
-**Weeks 11–18 | 11–13 hrs/week**
+* observability/timers.py
+* observability/metrics.py
+* evaluation/answer_eval.py
+* cache/query_cache.py
+* cache/answer_cache.py
+* Regression gating script (fails if p95 > 1.5s)
 
-## Week 11 — Agent Fundamentals
+Branch: week05-observability-eval
 
-**Hours**: 10
-
-### Build (Project #2 Start)
-
-* ReAct loop
-* Tool calling
-
----
-
-## Week 12 — Tools & Function Calling
-
-**Hours**: 11
-
-### Build
-
-* Search tool
-* Calculator tool
-* RAG tool
+Prompt
+"The full RAG pipeline works. I want to add structured observability, latency percentiles, regression gating, and a two-level caching system while preserving evaluation rigor."
 
 ---
 
-## Week 13 — Agent Orchestration
+# WEEK 6 — API + DOCKER + AWS DEPLOYMENT + LOAD TESTING
 
-**Hours**: 12
+Study (6–8 hrs)
 
-### Build
+* FastAPI production patterns
+* Docker optimization for ML services
+* EC2 deployment basics
+* Load testing with Locust
 
-* LangGraph state machine
-* Conditional flows
+Build Objectives
 
----
+* Build /query endpoint
+* Build /metrics endpoint
+* Dockerize application
+* Deploy to EC2 (CPU optimized instance)
+* Configure IAM + CloudWatch logging
+* Perform load testing (simulate concurrent users)
+* Optimize bottlenecks until p95 ≤ 1.5s
 
-## Week 14 — Agent Observability
+Deliverables
 
-**Hours**: 10
+* api/server.py
+* Dockerfile
+* docker-compose.yml
+* deployment/aws_architecture.md
+* deployment/load_test.py
+* Final latency + load report
 
-### Build
+Branch: week06-deployment-loadtest
 
-* Step-level traces
-* Decision logs
-
----
-
-## Week 15 — Agent Evaluation
-
-**Hours**: 12
-
-### Build
-
-* Task completion metrics
-* Tool correctness checks
-
----
-
-## Week 16 — Human-in-the-Loop
-
-**Hours**: 10
-
-### Build
-
-* Confidence threshold
-* Escalation logic
+Prompt
+"The RAG backend is production-ready locally. I want to containerize it, deploy on AWS EC2, run load tests, and optimize until p95 latency remains under 1.5 seconds under realistic concurrent load."
 
 ---
 
-## Week 17 — Multi-Agent Systems
+# END OF MARCH STATE
 
-**Hours**: 12
+At the end of 6 weeks:
 
-### Build
+* Fully engineered hybrid RAG backend
+* Selective reranking + context optimization
+* Strict latency instrumentation (p95 ≤ 1.5s)
+* Regression-gated evaluation framework
+* Two-level caching
+* Dockerized deployment
+* AWS-hosted service
+* Load-tested and performance-validated system
 
-* Manager + worker agents
-
----
-
-## Week 18 — Failure Analysis
-
-**Hours**: 10
-
-### Build
-
-* Intentional failure injection
-* `FAILURE_MODES.md`
-
-**Checkpoint**: Project #2 COMPLETE
-
----
-
-# PHASE 4 — CAPSTONE & INTERVIEW READINESS
-
-**Weeks 19–24 | 12–14 hrs/week**
-
-## Weeks 19–20 — Capstone Project (Project #3)
-
-**Hours**: 25–28 total
-
-**Domain Agent (Finance / Support)**
-
-* RAG
-* Agents
-* Evaluation
-* Cost tracking
-* Human-in-the-loop
-
----
-
-## Week 21 — Java / Spring Integration
-
-**Hours**: 12
-
-* Java API → Python agent
-* OR Spring AI RAG microservice
-
----
-
-## Week 22 — Deployment
-
-**Hours**: 14
-
-* AWS deployment
-* CI pipeline
-
----
-
-## Week 23 — System Design Prep
-
-**Hours**: 10
-
-* 5 agent system designs
-* Written answers
-
----
-
-## Week 24 — Polish & Apply
-
-**Hours**: 8–10
-
-* README polish
-* Demo videos
-* LinkedIn article
-
----
-
-# END STATE
-
-By end of May you will have:
-
-* 3 production-grade projects
-* Deep LLM & agent intuition
-* Evaluation & reliability mindset
-* Interview-ready system narratives
-
-This profile aligns directly with **GenAI Engineer / Agentic AI Engineer / AI Platform Engineer** roles.
+This represents a production-grade RAG system suitable for internal transfer discussions and external demonstration.
