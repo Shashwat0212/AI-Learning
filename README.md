@@ -79,6 +79,7 @@ Study (6–8 hrs)
 
 * Reciprocal Rank Fusion (RRF)
 * Retrieval metrics (Recall@k, MRR)
+* Synthetic data generation for evaluation stress testing
 
 Build Objectives
 
@@ -86,6 +87,7 @@ Build Objectives
 * Implement RRF-based hybrid retrieval
 * Build retrieval evaluation harness
 * Create 20–30 golden retrieval queries
+* Implement synthetic query generator (LLM-generated edge/adversarial queries)
 
 Deliverables
 
@@ -93,7 +95,9 @@ Deliverables
 * retrieval/fusion.py
 * evaluation/retrieval_eval.py
 * evaluation/golden_queries.json
+* evaluation/synthetic_query_generator.py
 * Recall@5 and Recall@10 report
+* Synthetic stress-test report (edge-case coverage)
 
 Branch: week02-hybrid-retrieval
 
@@ -166,13 +170,14 @@ Prompt
 
 ---
 
-# WEEK 5 — OBSERVABILITY + REGRESSION EVALUATION + CACHING
+# WEEK 5 — OBSERVABILITY + REGRESSION EVALUATION + CACHING + RESPONSIBLE AI LOGGING
 
 Study (6–8 hrs)
 
 * p50 vs p95 measurement
 * Structured logging
 * LRU caching strategies
+* Responsible AI principles (bias, hallucination detection, abstention strategies)
 
 Build Objectives
 
@@ -183,6 +188,9 @@ Build Objectives
 * Add answer-level evaluation (citation checks)
 * Implement retrieval-level cache
 * Implement optional answer cache
+* Add hallucination logging (no-source answer detection)
+* Add confidence scoring + abstention threshold
+* Add basic toxicity filter (lightweight local model or rule-based)
 
 Deliverables
 
@@ -191,7 +199,10 @@ Deliverables
 * evaluation/answer_eval.py
 * cache/query_cache.py
 * cache/answer_cache.py
+* evaluation/hallucination_logger.py
+* evaluation/confidence_scoring.py
 * Regression gating script (fails if p95 > 1.5s)
+* Responsible AI logging report
 
 Branch: week05-observability-eval
 
@@ -200,7 +211,7 @@ Prompt
 
 ---
 
-# WEEK 6 — API + DOCKER + AWS DEPLOYMENT + LOAD TESTING
+# WEEK 6 — API + DOCKER + AWS DEPLOYMENT + LOAD TESTING + GOVERNANCE CHECK
 
 Study (6–8 hrs)
 
@@ -208,16 +219,19 @@ Study (6–8 hrs)
 * Docker optimization for ML services
 * EC2 deployment basics
 * Load testing with Locust
+* Production AI governance checklists
 
 Build Objectives
 
 * Build /query endpoint
 * Build /metrics endpoint
+* Expose confidence score + citation trace in API response
 * Dockerize application
 * Deploy to EC2 (CPU optimized instance)
 * Configure IAM + CloudWatch logging
 * Perform load testing (simulate concurrent users)
 * Optimize bottlenecks until p95 ≤ 1.5s
+* Create lightweight AI governance checklist document
 
 Deliverables
 
@@ -226,7 +240,9 @@ Deliverables
 * docker-compose.yml
 * deployment/aws_architecture.md
 * deployment/load_test.py
+* deployment/governance_checklist.md
 * Final latency + load report
+* Production readiness summary (performance + responsible AI compliance)
 
 Branch: week06-deployment-loadtest
 
