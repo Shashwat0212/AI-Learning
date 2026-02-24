@@ -1,0 +1,22 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Pytest cache
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Coverage (future)
+.coverage
+htmlcov/
