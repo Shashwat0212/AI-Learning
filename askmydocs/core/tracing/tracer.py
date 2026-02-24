@@ -23,8 +23,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 from ..config import TracingConfig
-from ..errors import InvalidSpanError, SpanHierarchyError, TracingError
-from ..types import SpanRecord, Tags, TraceRecord
+from ..errors import InvalidSpanError, SpanHierarchyError, TracingError, SLAViolationError
+from ..types import SpanRecord, Tags, TraceRecord, SLAResult
+from .stats import StatsAggregator
+from .sla import SLARegistry
+from contextlib import asynccontextmanager, contextmanager
 
 
 def _now_ns() -> int:
@@ -298,8 +301,16 @@ class Tracer:
     Tracer itself is lightweight and stateless aside from its config.
     """
 
-    def __init__(self, config: Optional[TracingConfig] = None):
+    def __init__(
+        self,
+        config: Optional[TracingConfig] = None,
+        *,
+        aggregator: Optional["StatsAggregator"] = None,
+        sla_registry: Optional["SLARegistry"] = None,
+    ):
         self._config = config or TracingConfig()
+        self._aggregator = aggregator
+        self._sla_registry = sla_registry
 
     def start_trace(self, request_id: str, metadata: Optional[Tags] = None) -> Trace:
         """
@@ -312,3 +323,62 @@ class Tracer:
         if not self._config.enable_tracing:
             raise TracingError("Tracing is disabled by configuration")
         return Trace(request_id=request_id, metadata=metadata, config=self._config)
+    
+    def _post_process(self, trace_record: TraceRecord) -> Optional[SLAResult]:
+        """
+        Shared post-processing:
+        - add trace to aggregator
+        - compute report
+        - check SLA
+        - optionally raise on violation
+        """
+        if self._aggregator is None:
+            return None
+
+        self._aggregator.add(trace_record)
+        report = self._aggregator.report()
+
+        if self._sla_registry is None:
+            return None
+
+        result = self._sla_registry.check(report)
+
+        if not result.ok and self._sla_registry.config.fail_fast:
+            # Raise the first violation (deterministic order depends on dict insertion).
+            stage_name, metrics = next(iter(result.violations.items()))
+            metric_name, observed_value = next(iter(metrics.items()))
+            raise SLAViolationError(stage_name, metric_name, observed_value)
+
+        return result
+    
+    @contextmanager
+    def request(self, request_id: str, metadata: Optional[Tags] = None):
+        """
+        Sync request context manager.
+
+        Usage:
+            with tracer.request("req-1") as trace:
+                with trace.span("retrieve"): ...
+        """
+        trace = self.start_trace(request_id, metadata)
+        try:
+            yield trace
+        finally:
+            trace_record = trace.finish()
+            self._post_process(trace_record)
+
+    @asynccontextmanager
+    async def arequest(self, request_id: str, metadata: Optional[Tags] = None):
+        """
+        Async request context manager.
+
+        Usage:
+            async with tracer.arequest("req-1") as trace:
+                async with trace.span("retrieve"): ...
+        """
+        trace = self.start_trace(request_id, metadata)
+        try:
+            yield trace
+        finally:
+            trace_record = trace.finish()
+            self._post_process(trace_record)
