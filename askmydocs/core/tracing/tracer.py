@@ -28,6 +28,7 @@ from ..types import SpanRecord, Tags, TraceRecord, SLAResult
 from .stats import StatsAggregator
 from .sla import SLARegistry
 from contextlib import asynccontextmanager, contextmanager
+from .exporter import JSONExporter
 
 
 def _now_ns() -> int:
@@ -112,6 +113,7 @@ class Trace:
 
         # Optional: map span_id -> stage name (helps error messages / debugging)
         self._span_name_by_id: dict[int, str] = {}
+
 
     # ----------------------------
     # Public API
@@ -307,10 +309,12 @@ class Tracer:
         *,
         aggregator: Optional["StatsAggregator"] = None,
         sla_registry: Optional["SLARegistry"] = None,
+        exporter: Optional[JSONExporter] = None,
     ):
         self._config = config or TracingConfig()
         self._aggregator = aggregator
         self._sla_registry = sla_registry
+        self._exporter = exporter
 
     def start_trace(self, request_id: str, metadata: Optional[Tags] = None) -> Trace:
         """
@@ -342,6 +346,10 @@ class Tracer:
             return None
 
         result = self._sla_registry.check(report)
+
+        if self._exporter:
+            self._exporter.export_trace(trace_record)
+            self._exporter.export_report(report)
 
         if not result.ok and self._sla_registry.config.fail_fast:
             # Raise the first violation (deterministic order depends on dict insertion).

@@ -96,6 +96,7 @@ class StatsAggregator:
 
         return Report(
             stages=stage_stats,
+            # TODO: Use real monotonic time for generated_at_ns in future
             generated_at_ns=0,  # We can later plug real monotonic time here if needed
         )
 

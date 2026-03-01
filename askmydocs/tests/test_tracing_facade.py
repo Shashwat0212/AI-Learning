@@ -8,6 +8,7 @@ from askmydocs.core.tracing.stats import StatsAggregator
 from askmydocs.core.tracing.sla import SLARegistry
 from askmydocs.core.tracing.tracer import Tracer
 from askmydocs.core.types import StageSLA
+from askmydocs.core.tracing.exporter import JSONExporter
 
 
 # --------------------------------------------
@@ -72,11 +73,13 @@ def test_sla_fail_fast():
 async def test_async_parallel_spans():
     agg = StatsAggregator(window_size=5000)
     sla = SLARegistry(SLAConfig(stage_budgets={}, fail_fast=False))
+    exporter = JSONExporter(trace_path="test_trace.jsonl", metrics_path="test_metrics.json")
 
     tracer = Tracer(
         TracingConfig(enable_tracing=True),
         aggregator=agg,
         sla_registry=sla,
+        exporter=exporter,
     )
 
     async def vec(trace):
