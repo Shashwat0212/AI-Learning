@@ -1,14 +1,152 @@
 # AskMyDocs — Ingest Module (Text-only v1)
 
-This document is the **design + implementation guide** for the Ingest module. It captures both the **coding steps** and the **system design constraints** we discussed (document size limits, ingestion SLAs, and future incremental ingestion support).
+This document describes the **final ingestion architecture and implementation plan** aligned with the overall AskMyDocs project structure.
+
+The goal of this document is to explain:
+
+• the **ingestion folder structure**
+• the **flow of data through the pipeline**
+• the **engineering constraints (document limits, SLAs)**
+• the **incremental ingestion module**
+• the **fast token estimation trick used in production systems**
 
 ---
 
-# 0) End-to-end pipeline mental model
+# 0) Global Project Structure (for context)
 
-The ingestion pipeline converts **raw files → searchable chunks**.
+The ingestion module sits inside the larger system:
 
-Pipeline flow:
+```
+askmydocs/
+
+  core/
+    config.py
+    types.py
+    errors.py
+    tracing/
+      tracer.py
+      stats.py
+      sla.py
+
+  ingest/
+
+  index/
+  retrieve/
+  experiments/
+  service/
+```
+
+Important design rule:
+
+```
+core/ = shared primitives used by all modules
+```
+
+Therefore **Document, Chunk, Candidate types remain in `core/types.py`**.
+
+The ingestion module only **uses them**, it does not redefine them.
+
+---
+
+# 1) Final Ingestion Folder Structure
+
+Updated ingestion structure based on the overall system layout.
+
+```
+askmydocs/
+
+  ingest/
+
+    pipeline.py                 # ingestion orchestrator
+
+    loaders/
+      text_loader.py
+
+    splitters/
+      base.py
+      fixed_token.py
+      sentence_aware.py
+      structure_aware.py
+
+    enrich/
+      metadata.py
+      hash_fingerprint.py
+      summaries.py
+
+    incremental/
+      diff_engine.py
+      chunk_cache.py
+      delta_indexer.py
+
+    utils/
+      token_estimator.py
+      chunk_builder.py
+
+    __init__.py
+```
+
+Explanation of new components:
+
+| Component          | Purpose                              |
+| ------------------ | ------------------------------------ |
+| pipeline.py        | orchestrates ingestion stages        |
+| token_estimator.py | fast token estimation (no tokenizer) |
+| chunk_builder.py   | safe chunk construction abstraction  |
+| incremental/       | optional delta indexing system       |
+
+---
+
+# 2) Ingestion Strategy Modes
+
+The ingestion system supports **two interchangeable modes**.
+
+## Mode 1 — Baseline ingestion
+
+Pipeline:
+
+```
+load
+split
+enrich
+embed
+index
+```
+
+This processes every document fully.
+
+---
+
+## Mode 2 — Incremental ingestion
+
+Pipeline:
+
+```
+load
+split
+fingerprint
+compare fingerprints
+embed changed chunks only
+update index
+```
+
+Example improvement:
+
+| Scenario     | Embeddings  |
+| ------------ | ----------- |
+| Full reindex | 1000 chunks |
+| Incremental  | 5 chunks    |
+
+Speed improvement:
+
+```
+20x – 200x
+```
+
+The ingestion pipeline will allow switching between these modes.
+
+---
+
+# 3) End‑to‑End Ingestion Flow
 
 ```
 file(s)
@@ -28,56 +166,19 @@ Embedding
 Index
 ```
 
-Important distinction:
+Key idea:
 
-| Pipeline           | Type          | SLA philosophy         |
-| ------------------ | ------------- | ---------------------- |
-| Query pipeline     | Online        | strict latency budget  |
-| Ingestion pipeline | Offline/async | throughput + freshness |
-
-Your existing **tracing + SLA system** will still monitor ingestion stages but failures should generally **alert rather than fail-fast**.
+```
+Ingestion prepares chunks
+Indexing stores them
+Retrieval later consumes them
+```
 
 ---
 
-# 1) Definition of a "Document"
+# 4) System Guardrails
 
-For **AskMyDocs v1**:
-
-```
-One file = one document
-```
-
-Supported formats initially:
-
-```
-.txt
-.md
-.jsonl
-```
-
-Future formats:
-
-```
-PDF
-HTML
-DOCX
-CSV
-```
-
-Examples of documents in real systems:
-
-| Source       | Document unit  |
-| ------------ | -------------- |
-| PDF          | whole file     |
-| Confluence   | page           |
-| GitHub repo  | many documents |
-| Slack thread | document       |
-
----
-
-# 2) System guardrails (very important)
-
-To keep ingestion predictable we define **hard limits**.
+To prevent unstable ingestion behaviour.
 
 ## Maximum document size
 
@@ -85,15 +186,13 @@ To keep ingestion predictable we define **hard limits**.
 MAX_DOCUMENT_SIZE_MB = 10
 ```
 
-Rough scale:
+Approx scale:
 
-| Metric               | Approx     |
-| -------------------- | ---------- |
-| characters           | ~2 million |
-| tokens               | ~350k      |
-| chunks (~500 tokens) | ~700       |
-
-This size is large enough for most documentation but still safe for memory.
+| metric     | value |
+| ---------- | ----- |
+| characters | ~2M   |
+| tokens     | ~350k |
+| chunks     | ~700  |
 
 ---
 
@@ -103,8 +202,6 @@ This size is large enough for most documentation but still safe for memory.
 MAX_DOCUMENT_CHARS = 2_000_000
 ```
 
-Prevents extremely large files from entering the pipeline.
-
 ---
 
 ## Maximum chunks per document
@@ -113,13 +210,13 @@ Prevents extremely large files from entering the pipeline.
 MAX_CHUNKS_PER_DOCUMENT = 2000
 ```
 
-This protects against **chunk explosion** from logs or machine generated text.
+Prevents chunk explosion.
 
 ---
 
-# 3) Chunking configuration
+# 5) Chunking Configuration
 
-Recommended baseline:
+Baseline values:
 
 ```
 TARGET_CHUNK_TOKENS = 500
@@ -128,133 +225,85 @@ CHUNK_OVERLAP = 0.15
 
 Meaning:
 
-| parameter  | value          |
+| property   | value          |
 | ---------- | -------------- |
 | chunk size | 400–600 tokens |
 | overlap    | 15–20%         |
 
-This is widely used in production retrieval systems.
+---
+
+# 6) Token Estimation Optimization
+
+Running a tokenizer during chunking is expensive.
+
+Example cost:
+
+| Method           | Time     |
+| ---------------- | -------- |
+| Tokenizer encode | ~6–8 ms  |
+| Regex estimate   | ~0.05 ms |
+
+If a document produces **700 chunks**, tokenization alone could cost several seconds.
+
+Production RAG systems therefore use **fast token estimation**.
+
+Approximation:
+
+```
+tokens ≈ characters / 4
+```
+
+Implementation location:
+
+```
+ingest/utils/token_estimator.py
+```
+
+Example:
+
+```
+def estimate_tokens(text: str) -> int:
+    return max(1, len(text) // 4)
+```
+
+Tokenizer is only used later when constructing the **final LLM prompt**.
 
 ---
 
-# 4) Ingestion SLA philosophy
+# 7) Chunk Builder Abstraction
 
-Unlike query SLAs, ingestion SLAs focus on **index freshness**.
+Chunk span calculation is error‑prone.
 
-Key metric:
+To avoid bugs we introduce a **ChunkBuilder helper**.
+
+Location:
 
 ```
-time(upload → searchable)
+ingest/utils/chunk_builder.py
 ```
 
-### Target SLA (AskMyDocs dev environment)
+Responsibilities:
 
-| Document Size | SLA      |
-| ------------- | -------- |
-| < 500 KB      | < 5 sec  |
-| 500 KB – 5 MB | < 15 sec |
-| 5 MB – 10 MB  | < 30 sec |
+```
+track span offsets
+calculate token counts
+apply overlap
+construct Chunk objects safely
+```
+
+Splitters should use ChunkBuilder instead of constructing chunks manually.
 
 ---
 
-# 5) Stage-level monitoring (for tracing system)
+# 8) Data Types Used by Ingestion
 
-Even though ingestion is async, we track stage timings.
-
-Example stage budgets:
-
-| Stage                     | Target p95 |
-| ------------------------- | ---------- |
-| ingest.load               | 50 ms      |
-| ingest.split              | 50 ms      |
-| ingest.enrich.metadata    | 10 ms      |
-| ingest.enrich.fingerprint | 5 ms       |
-| ingest.embed              | 200 ms     |
-| ingest.index              | 50 ms      |
-
-These values help detect bottlenecks.
-
----
-
-# 6) Data Types (core primitives)
-
-## Document
-
-Represents normalized source text.
-
-Fields:
+Defined in:
 
 ```
-doc_id: str
-tenant_id: str
-source_uri: str
-text: str
-metadata: dict
+core/types.py
 ```
 
-Role in pipeline:
-
-```
-Loader → Document → Splitter
-```
-
----
-
-## Chunk
-
-Represents an **indexable unit of text**.
-
-Fields:
-
-```
-chunk_id: str
-doc_id: str
-tenant_id: str
-text: str
-token_count: int
-span: (start, end)
-metadata: dict
-fingerprint: str
-```
-
-Role:
-
-```
-Splitter → Chunk → Enrichment → Embedding → Index
-```
-
----
-
-## Candidate
-
-Used during retrieval (not ingestion).
-
-Fields:
-
-```
-chunk_id
-score
-source
-metadata
-```
-
----
-
-# 7) Implementation roadmap (step-by-step)
-
-We implement the ingestion pipeline in the following order.
-
----
-
-# Step A — Data types
-
-File:
-
-```
-askmydocs/ingest/types.py
-```
-
-Define:
+Types used:
 
 ```
 Document
@@ -262,13 +311,21 @@ Chunk
 Candidate
 ```
 
-Reason:
+Pipeline usage:
 
-All modules depend on these shapes.
+```
+Loader → Document → Splitter → Chunk
+```
 
 ---
 
-# Step B — Document loader
+# 9) Implementation Roadmap
+
+The ingestion module will be implemented step‑by‑step.
+
+---
+
+# Step A — Document Loader
 
 File:
 
@@ -279,11 +336,10 @@ ingest/loaders/text_loader.py
 Responsibilities:
 
 ```
-read file
+read files
 encoding detection
 unicode normalization
-attach metadata
-create doc_id
+create Document
 ```
 
 Output:
@@ -292,15 +348,44 @@ Output:
 Iterable[Document]
 ```
 
-Checkpoint:
+---
+
+# Step B — Token Estimator
+
+File:
 
 ```
-file → Document
+ingest/utils/token_estimator.py
+```
+
+Purpose:
+
+```
+fast token count approximation
+used by splitters
 ```
 
 ---
 
-# Step C — Splitter interface
+# Step C — Chunk Builder
+
+File:
+
+```
+ingest/utils/chunk_builder.py
+```
+
+Responsibilities:
+
+```
+build Chunk objects
+manage offsets
+handle overlap
+```
+
+---
+
+# Step D — Splitter Interface
 
 File:
 
@@ -314,13 +399,9 @@ Interface:
 split(doc: Document) -> list[Chunk]
 ```
 
-Purpose:
-
-Allows interchangeable chunking strategies.
-
 ---
 
-# Step D — Fixed token splitter
+# Step E — Fixed Token Splitter
 
 File:
 
@@ -331,25 +412,14 @@ ingest/splitters/fixed_token.py
 Strategy:
 
 ```
-sliding window
-fixed token size
+sliding token window
+fixed chunk size
 overlap
 ```
 
-Parameters:
-
-```
-chunk_tokens
-chunk_overlap
-```
-
-Purpose:
-
-Baseline splitter and debugging tool.
-
 ---
 
-# Step E — Sentence aware splitter
+# Step F — Sentence Aware Splitter
 
 File:
 
@@ -364,13 +434,9 @@ sentence segmentation
 pack sentences until token target
 ```
 
-Benefit:
-
-More semantic coherence.
-
 ---
 
-# Step F — Structure aware splitter
+# Step G — Structure Aware Splitter
 
 File:
 
@@ -382,17 +448,13 @@ Strategy:
 
 ```
 detect headings
-split into sections
+split sections
 fallback to sentence-aware
 ```
 
-Recommended default splitter.
-
 ---
 
-# Step G — Enrichment
-
-## Metadata enrichment
+# Step H — Metadata Enrichment
 
 File:
 
@@ -404,13 +466,13 @@ Adds metadata such as:
 
 ```
 title
-section heading
+section headings
 source uri
 ```
 
 ---
 
-## Fingerprint hashing
+# Step I — Fingerprint Hashing
 
 File:
 
@@ -418,13 +480,13 @@ File:
 ingest/enrich/hash_fingerprint.py
 ```
 
-Fingerprint rule:
+Rule:
 
 ```
 sha256(chunk_text)
 ```
 
-Uses:
+Used for:
 
 ```
 dedupe
@@ -434,112 +496,55 @@ incremental ingestion
 
 ---
 
-# 8) Chunk explosion concept
+# Step J — Ingestion Pipeline
 
-Large documents produce many chunks.
-
-Example:
-
-| doc size | chunks |
-| -------- | ------ |
-| 20 KB    | ~40    |
-| 5 MB     | ~1500  |
-
-Embedding cost scales with chunk count.
-
-Therefore the real throughput metric becomes:
+File:
 
 ```
-chunks/sec
+ingest/pipeline.py
+```
+
+Responsibilities:
+
+```
+coordinate ingestion stages
+switch between baseline and incremental modes
+call tracing spans
 ```
 
 ---
 
-# 9) Incremental ingestion (future optimization)
+# Step K — Incremental Ingestion Module
 
-Problem with naive ingestion:
-
-```
-document edited
-→ re-chunk
-→ re-embed all chunks
-→ re-index everything
-```
-
-Even if only a small section changed.
-
----
-
-## Incremental ingestion idea
-
-Use fingerprints to detect unchanged chunks.
-
-Pipeline:
-
-```
-old chunks
-      ↓
-new chunks
-      ↓
-compare fingerprints
-      ↓
-embed only changed chunks
-```
-
-Example:
-
-| scenario    | chunks embedded |
-| ----------- | --------------- |
-| naive       | 1000            |
-| incremental | 5               |
-
-Improvement:
-
-```
-20x – 200x faster
-```
-
----
-
-# 10) Future experimental module
-
-We will build incremental ingestion **as a separate experiment**.
-
-Proposed structure:
+Location:
 
 ```
 ingest/incremental/
-    diff_engine.py
-    chunk_cache.py
-    delta_indexer.py
-
-experiments/
-    incremental_eval.py
 ```
 
-Experiment compares:
+Components:
 
 ```
-full_reindex()
-vs
-delta_reindex()
+diff_engine.py
+chunk_cache.py
+delta_indexer.py
 ```
 
-Metrics:
+Purpose:
 
 ```
-time
-embedding calls
-chunks processed
+detect changed chunks
+skip unchanged embeddings
+update index incrementally
 ```
 
 ---
 
-# 11) Definition of done (Ingest v1)
+# 10) Definition of Done (Ingest v1)
 
-The module is considered complete when:
+The module is complete when:
 
-✔ documents load correctly
+✔ documents load successfully
 
 ✔ chunking works with at least one splitter
 
@@ -549,16 +554,20 @@ The module is considered complete when:
 
 ✔ chunks ready for embedding
 
-✔ ingestion respects size guardrails
+✔ ingestion guardrails enforced
+
+✔ baseline ingestion pipeline functional
+
+Incremental ingestion will be validated through **experiments module** later.
 
 ---
 
-# 12) Next implementation step
+# 11) Next Implementation Step
 
 Next code step:
 
 ```
-Step C — implement splitters/base.py
+Step B — implement token_estimator.py
 ```
 
-Then we build the **fixed token splitter** to run the first full ingestion pipeline.
+Then implement **ChunkBuilder**, followed by the **splitter interface**.
