@@ -61,3 +61,31 @@ class ExportConfig:
     metrics_path: str = "metrics.json"
     enable_prometheus: bool = False
     enable_otel: bool = False
+
+
+# ----------------------------
+# Ingestion Guardrails
+# ----------------------------
+
+class IngestConfig:
+    """
+    Central configuration for ingestion limits and chunking policy.
+
+    Design goals:
+    - Provide a single source of truth for ingestion guardrails.
+    - Keep loader/splitter modules free of hard‑coded constants.
+    - Allow experiments to override limits easily.
+    """
+
+    # Maximum file size accepted by the ingestion pipeline
+    MAX_DOCUMENT_SIZE_MB: int = 10
+
+    # Maximum allowed characters inside a document
+    MAX_DOCUMENT_CHARS: int = 2_000_000
+
+    # Prevent chunk explosion during splitting
+    MAX_CHUNKS_PER_DOCUMENT: int = 2000
+
+    # Default chunking configuration
+    TARGET_CHUNK_TOKENS: int = 500
+    CHUNK_OVERLAP: float = 0.15

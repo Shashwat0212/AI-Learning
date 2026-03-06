@@ -98,3 +98,56 @@ class SLAResult:
     """
     ok: bool
     violations: dict[str, dict[str, float]]
+
+
+@dataclass(frozen=True)
+class Document:
+    """
+    Canonical representation of a loaded source document before chunking.
+
+    Design choices:
+    - Immutable: once created, ingestion stages should not mutate the document.
+    - text contains normalized content (encoding + newline normalization done in loader).
+    - metadata stores source-level info (filename, encoding, file size, etc.).
+    """
+    doc_id: str
+    tenant_id: str
+    source_uri: str
+    text: str
+    metadata: Tags
+
+
+@dataclass(frozen=True)
+class Chunk:
+    """
+    Smallest indexable unit produced by splitters.
+
+    Design choices:
+    - span stores (start_char, end_char) offsets relative to the original Document.text.
+    - token_count is estimated during ingestion (fast estimator, not tokenizer).
+    - fingerprint enables dedupe and incremental ingestion.
+    """
+    chunk_id: str
+    doc_id: str
+    tenant_id: str
+    text: str
+    token_count: int
+    span: tuple[int, int]
+    metadata: Tags
+    fingerprint: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class Candidate:
+    """
+    Retrieval-time representation of a chunk returned by search.
+
+    Design choices:
+    - source indicates which retrieval stage produced the candidate
+      (dense, bm25, fused, reranked).
+    - metadata allows attaching scoring explanations or debugging signals.
+    """
+    chunk_id: str
+    score: float
+    source: str
+    metadata: Tags
