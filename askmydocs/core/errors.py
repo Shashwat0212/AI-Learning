@@ -47,3 +47,25 @@ class SLAViolationError(PerformanceError):
 
 class ConfigurationError(PerformanceError):
     """Raised when tracing or SLA configuration is invalid."""
+
+
+# ----------------------------
+# Ingestion Errors
+# ----------------------------
+
+class DocumentTooLargeError(PerformanceError):
+    """
+    Raised when a file exceeds the configured MAX_DOCUMENT_SIZE_MB limit
+    during ingestion.
+
+    This prevents extremely large files from being processed by the
+    ingestion pipeline.
+    """
+
+    def __init__(self, file_path: str, max_size_mb: int):
+        self.file_path = file_path
+        self.max_size_mb = max_size_mb
+
+        super().__init__(
+            f"Document '{file_path}' exceeds maximum allowed size of {max_size_mb} MB"
+        )

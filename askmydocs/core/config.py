@@ -80,6 +80,10 @@ class IngestConfig:
     # Maximum file size accepted by the ingestion pipeline
     MAX_DOCUMENT_SIZE_MB: int = 10
 
+    # Threshold above which files are processed using streaming instead of full read
+    # This protects the loader from loading large files entirely into memory
+    STREAMING_THRESHOLD_MB: int = 2
+
     # Maximum allowed characters inside a document
     MAX_DOCUMENT_CHARS: int = 2_000_000
 
