@@ -4,7 +4,7 @@ import hashlib
 from typing import Iterator, List
 
 from askmydocs.core.types import Chunk, Document
-from askmydocs.core.config import IngestConfig
+from askmydocs.core.config import IngestConfig, OverlapMode
 from askmydocs.ingest.utils.token_estimator import estimate_tokens
 
 
@@ -20,8 +20,9 @@ class ChunkBuilder:
     - enforce MAX_CHUNKS_PER_DOCUMENT guardrail
     """
 
-    def __init__(self, document: Document):
+    def __init__(self, document: Document, overlap_mode: OverlapMode = OverlapMode.TOKEN):
         self.document = document
+        self.overlap_mode = overlap_mode
 
         self.buffer: List[str] = []
         self.buffer_tokens: int = 0
@@ -59,6 +60,32 @@ class ChunkBuilder:
         for chunk in emitted:
             yield chunk
 
+        self.current_offset += len(text)
+
+    def add_group(self, text: str) -> Iterator[Chunk]:
+        """
+        Add a pre-grouped semantic text block (already sentence-grouped by
+        a splitter) and emit it as a chunk candidate.
+
+        Unlike add_segment(), this bypasses incremental buffering because
+        the splitter has already decided the semantic boundary.
+        """
+
+        if not text:
+            return
+
+        # Start this chunk exactly where the current offset is
+        self.span_start = self.current_offset
+
+        # Replace buffer with the grouped text
+        self.buffer = [text]
+        self.buffer_tokens = estimate_tokens(text)
+
+        # Emit chunk directly
+        chunk = self._emit_chunk()
+        yield chunk
+
+        # Advance offset after emitting
         self.current_offset += len(text)
 
     def flush(self) -> Iterator[Chunk]:
@@ -101,11 +128,15 @@ class ChunkBuilder:
         if self.chunk_count > IngestConfig.MAX_CHUNKS_PER_DOCUMENT:
             raise RuntimeError("Maximum chunks per document exceeded")
 
-        # Prepare overlap buffer and adjust span_start correctly
-        if not final and self.overlap_tokens > 0:
-            overlap_chars = self._apply_overlap(text)
-            # next chunk should begin where the overlap starts
+        # Prepare overlap buffer depending on configured mode
+        if not final and self.overlap_mode == OverlapMode.TOKEN and self.overlap_tokens > 0:
+            overlap_chars = self._apply_token_overlap(text)
             self.span_start = span_end - overlap_chars
+
+        elif not final and self.overlap_mode == OverlapMode.SENTENCE:
+            overlap_chars = self._apply_sentence_overlap(text)
+            self.span_start = span_end - overlap_chars
+
         else:
             self.buffer = []
             self.buffer_tokens = 0
@@ -113,7 +144,7 @@ class ChunkBuilder:
 
         return chunk
 
-    def _apply_overlap(self, text: str) -> int:
+    def _apply_token_overlap(self, text: str) -> int:
         """
         Retain overlap tokens from the end of the previous chunk.
         Returns the number of characters retained so span offsets can be fixed.
@@ -127,6 +158,28 @@ class ChunkBuilder:
 
         self.buffer = [overlap_text]
         self.buffer_tokens = estimate_tokens(overlap_text)
+
+        return overlap_chars
+
+    def _apply_sentence_overlap(self, text: str) -> int:
+        """
+        Retain the last sentence from the previous chunk for semantic overlap.
+        Returns number of characters retained.
+        """
+
+        import re
+
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+
+        if not sentences:
+            return 0
+
+        last_sentence = sentences[-1]
+
+        overlap_chars = len(last_sentence)
+
+        self.buffer = [last_sentence]
+        self.buffer_tokens = estimate_tokens(last_sentence)
 
         return overlap_chars
 

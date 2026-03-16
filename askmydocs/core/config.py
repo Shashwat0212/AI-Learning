@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict
+from enum import Enum
 
 from .types import StageSLA
 
@@ -93,3 +94,23 @@ class IngestConfig:
     # Default chunking configuration
     TARGET_CHUNK_TOKENS: int = 500
     CHUNK_OVERLAP: float = 0.15
+# ----------------------------
+# Ingestion Guardrails
+
+class OverlapMode(str, Enum):
+    """
+    Defines how chunk overlap should be applied during chunk construction.
+
+    TOKEN:
+        Traditional token-based overlap (last N tokens reused in next chunk).
+
+    SENTENCE:
+        Overlap is applied at sentence boundaries (last sentence reused).
+
+    NONE:
+        No overlap between chunks.
+    """
+
+    TOKEN = "token"
+    SENTENCE = "sentence"
+    NONE = "none"
