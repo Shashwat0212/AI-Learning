@@ -98,3 +98,48 @@ def validate_file(file_path: Path) -> list[ScanFinding]:
             )
 
     return findings
+
+
+# -------------------------------------------------
+# Class Wrapper (for pipeline compatibility)
+# -------------------------------------------------
+
+from askmydocs.ingest.safety.types import SafetyScanResult, SafetyDecision
+
+
+class SafetyValidator:
+    """
+    Wrapper class for safety validation logic.
+
+    Converts scan results into allow/deny decisions.
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def validate(self, scan_result: SafetyScanResult) -> SafetyDecision:
+        """
+        Validate scan result and return a structured SafetyDecision.
+        """
+
+        # Simple policy: reject if any high severity finding
+        has_high = any(f.severity == "high" for f in scan_result.findings)
+
+        if has_high:
+            return SafetyDecision(
+                action="reject",
+                reason="high_severity_detected",
+                findings=scan_result.findings,
+                metadata={
+                    "risk_score": getattr(scan_result, "risk_score", None)
+                },
+            )
+
+        return SafetyDecision(
+            action="allow",
+            reason="no_high_severity",
+            findings=scan_result.findings,
+            metadata={
+                "risk_score": getattr(scan_result, "risk_score", None)
+            },
+        )

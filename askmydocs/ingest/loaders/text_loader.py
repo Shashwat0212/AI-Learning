@@ -299,3 +299,28 @@ def load_documents(path: str | Path, tenant_id: str) -> Iterable[Document]:
             text=text,
             metadata=metadata,
         )
+
+ # -------------------------------------------------
+ # Class Wrapper (for pipeline compatibility)
+ # -------------------------------------------------
+
+
+from typing import Iterable, Iterator
+from pathlib import Path
+
+
+class TextLoader:
+    """
+    Wrapper class around load_documents function for pipeline compatibility.
+    """
+
+    def __init__(self, tenant_id: str):
+        self.tenant_id = tenant_id
+
+    def load(self, paths: Iterable[str | Path]) -> Iterator[Document]:
+        """
+        Load documents from given paths.
+        """
+
+        for path in paths:
+            yield from load_documents(path, self.tenant_id)

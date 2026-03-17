@@ -136,3 +136,24 @@ def scan_text(text: str) -> SafetyScanResult:
         category_counts=category_counts,
         risk_score=risk_score,
     )
+
+
+# -------------------------------------------------
+# Class Wrapper (for pipeline compatibility)
+# -------------------------------------------------
+
+
+class SafetyScanner:
+    """
+    Wrapper around scan_text to provide a class-based interface
+    compatible with the ingestion pipeline.
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def scan(self, text: str) -> SafetyScanResult:
+        """
+        Run all safety scanners on the given text.
+        """
+        return scan_text(text)

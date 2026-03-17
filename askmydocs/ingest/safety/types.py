@@ -74,3 +74,10 @@ class SafetyDecision:
     @property
     def is_quarantined(self) -> bool:
         return self.action == "quarantine"
+
+    @property
+    def allowed(self) -> bool:
+        """
+        Backward-compatible alias for pipeline usage.
+        """
+        return self.is_allowed
