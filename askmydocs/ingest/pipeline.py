@@ -20,6 +20,11 @@ from askmydocs.ingest.splitters.base import BaseSplitter
 from askmydocs.ingest.enrich.metadata import MetadataEnricher
 from askmydocs.ingest.enrich.hash_fingerprint import FingerprintGenerator
 
+# Incremental ingestion
+from askmydocs.ingest.incremental.cache_manager import CacheManager
+from askmydocs.ingest.incremental.diff_engine import DiffEngine
+from askmydocs.ingest.incremental.delta_indexer import DeltaIndexer
+
 
 class IngestionPipeline:
     """
@@ -51,6 +56,7 @@ class IngestionPipeline:
         splitter: BaseSplitter,
         validator: SafetyValidator,
         scanner: SafetyScanner,
+        mode: str = "baseline",
     ) -> None:
         self.loader = loader
         self.splitter = splitter
@@ -59,6 +65,12 @@ class IngestionPipeline:
 
         self.metadata_enricher = MetadataEnricher()
         self.fingerprint_generator = FingerprintGenerator()
+
+        # Incremental components
+        self.mode = mode
+        self.cache_manager = CacheManager()
+        self.diff_engine = DiffEngine()
+        self.delta_indexer = DeltaIndexer()
 
     def run(self, paths: Iterable[str]) -> Iterator[Chunk]:
         """
@@ -84,6 +96,7 @@ class IngestionPipeline:
 
             if not decision.allowed:
                 # Skip unsafe documents
+                # TODO: log rejected documents for observability
                 continue
 
             # --- Step 2: Split ---
@@ -95,9 +108,46 @@ class IngestionPipeline:
             # --- Step 4: Fingerprinting ---
             fingerprinted_chunks = self.fingerprint_generator.generate(enriched_chunks)
 
-            # --- Yield final chunks ---
-            for chunk in fingerprinted_chunks:
-                yield chunk
+            # Convert to list (needed for diffing)
+            fingerprinted_chunks = list(fingerprinted_chunks)
+            # TODO: support streaming diff to avoid full materialization
+
+            if self.mode == "incremental":
+
+                # TODO: use stable doc_id (e.g., file path or file hash)
+                doc_id = (document.metadata or {}).get("source") or str(hash(document.text))
+
+                # Load existing cache
+                cache = self.cache_manager.get_cache(doc_id)
+                old_fingerprints = cache.get_all_fingerprints()
+
+                # Compute diff
+                diff = self.diff_engine.compute_diff(old_fingerprints, fingerprinted_chunks)
+
+                # Apply changes
+                result = self.delta_indexer.apply(diff)
+                # TODO: use result for logging / tracing
+
+                # Update cache
+                # Ensure fingerprints are valid (non-None)
+                new_mapping = {
+                    c.fingerprint: c.fingerprint
+                    for c in diff.added
+                    if c.fingerprint is not None
+                }
+                # TODO: enforce fingerprint presence earlier in pipeline (strong validation)
+                cache.bulk_add(new_mapping)
+                cache.bulk_remove(diff.removed)
+                self.cache_manager.save_cache(doc_id, cache)
+
+                # Yield only added chunks
+                for chunk in diff.added:
+                    yield chunk
+
+            else:
+                # Baseline mode → yield all chunks
+                for chunk in fingerprinted_chunks:
+                    yield chunk
 
 
 # --- Helper factory (optional) ---

@@ -151,3 +151,26 @@ class Candidate:
     score: float
     source: str
     metadata: Tags
+
+from dataclasses import field
+from typing import List
+
+
+@dataclass(frozen=True)
+class DiffResult:
+    """
+    Result of comparing newly generated chunks with the previously cached
+    fingerprint state for a document.
+
+    Design choices:
+    - added: chunks that are new and must be processed downstream
+    - removed: fingerprints that existed before but are no longer present
+    - unchanged: chunks that already existed and can be skipped in incremental mode
+    """
+    added: List["Chunk"] = field(default_factory=list)
+    removed: List[str] = field(default_factory=list)
+    unchanged: List["Chunk"] = field(default_factory=list)
+
+    @property
+    def has_changes(self) -> bool:
+        return bool(self.added or self.removed)

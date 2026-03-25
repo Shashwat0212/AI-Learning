@@ -20,3 +20,6 @@ __pycache__/
 # Coverage (future)
 .coverage
 htmlcov/
+
+#File Cache
+.cache/
