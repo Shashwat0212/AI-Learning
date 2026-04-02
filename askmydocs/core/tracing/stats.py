@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import math
 from collections import deque
+import time
 from typing import Dict
 
 from ..types import Report, StageStats, TraceRecord
@@ -76,10 +77,12 @@ class StatsAggregator:
 
         stage_stats: Dict[str, StageStats] = {}
 
-        for stage_name, durations in self._data.items():
+        for stage_name in sorted(self._data.keys()):
+            durations = self._data[stage_name]
             if not durations:
                 continue
 
+            # TODO: optimize percentile computation for large windows (avoid full sort if needed)
             values = sorted(durations)
             count = len(values)
 
@@ -87,6 +90,7 @@ class StatsAggregator:
             p95 = self._percentile(values, 0.95)
             p99 = self._percentile(values, 0.99)
 
+            # TODO: extend StageStats with additional metrics (e.g., error_rate, throughput)
             stage_stats[stage_name] = StageStats(
                 count=count,
                 p50_ms=p50,
@@ -94,10 +98,10 @@ class StatsAggregator:
                 p99_ms=p99,
             )
 
+        # TODO: consider adding wall-clock timestamp alongside monotonic time if needed
         return Report(
             stages=stage_stats,
-            # TODO: Use real monotonic time for generated_at_ns in future
-            generated_at_ns=0,  # We can later plug real monotonic time here if needed
+            generated_at_ns=time.monotonic_ns()
         )
 
     # ----------------------------

@@ -97,7 +97,7 @@ class SLAResult:
       useful for logging/alerts/Prometheus later.
     """
     ok: bool
-    violations: dict[str, dict[str, float]]
+    violations: dict[str, dict[str, dict[str, float]]]
 
 
 @dataclass(frozen=True)

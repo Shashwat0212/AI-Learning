@@ -315,6 +315,7 @@ class Tracer:
         self._aggregator = aggregator
         self._sla_registry = sla_registry
         self._exporter = exporter
+        self._last_trace: Optional[TraceRecord] = None
 
     def start_trace(self, request_id: str, metadata: Optional[Tags] = None) -> Trace:
         """
@@ -336,6 +337,8 @@ class Tracer:
         - check SLA
         - optionally raise on violation
         """
+        self._last_trace = trace_record
+
         if self._aggregator is None:
             return None
 
@@ -354,7 +357,14 @@ class Tracer:
         if not result.ok and self._sla_registry.config.fail_fast:
             # Raise the first violation (deterministic order depends on dict insertion).
             stage_name, metrics = next(iter(result.violations.items()))
-            metric_name, observed_value = next(iter(metrics.items()))
+            metric_name, metric_data = next(iter(metrics.items()))
+
+            # Extract actual observed value from structured SLA output
+            observed_value = metric_data.get("actual")
+            if observed_value is None:
+                # TODO: this should never happen if SLA + stats are correct
+                observed_value = 0.0
+
             raise SLAViolationError(stage_name, metric_name, observed_value)
 
         return result
@@ -390,3 +400,11 @@ class Tracer:
         finally:
             trace_record = trace.finish()
             self._post_process(trace_record)
+
+    def get_last_trace(self) -> Optional[TraceRecord]:
+        """
+        Return the most recently completed TraceRecord.
+
+        Returns None if no trace has been executed yet.
+        """
+        return self._last_trace
