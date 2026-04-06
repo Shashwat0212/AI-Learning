@@ -95,19 +95,23 @@ class IngestionPipeline:
         with self.tracer.request(request_id) as trace:
             for document in self.loader.load(paths):
 
+                # TODO: Add try/except per document to prevent single document failure from breaking pipeline
                 with trace.span("ingest.document"):
 
+                    # TODO: Attach document-level metrics (size, token count) to trace for SLA analysis
                     # --- Step 1: Safety Scan ---
                     with trace.span("ingest.scan"):
                         scan_result = self.scanner.scan(document.text)
 
                     decision = self.validator.validate(scan_result)
+                    # TODO: Handle flagged (medium severity) documents separately (store safety flags in metadata)
 
                     if not decision.allowed:
+                        # TODO: Log rejected documents with metadata and scan findings for observability/audit
                         # Skip unsafe documents
-                        # TODO: log rejected documents for observability
                         continue
 
+                    # TODO: If document is flagged (medium severity), propagate safety metadata to chunks
                     # --- Step 2: Split ---
                     with trace.span("ingest.split"):
                         chunks = self.splitter.split(document)
@@ -126,7 +130,7 @@ class IngestionPipeline:
 
                     if self.mode == "incremental":
 
-                        # TODO: use stable doc_id (e.g., file path or file hash)
+                        # TODO: Use stable doc_id (e.g., file path or SHA256 hash instead of Python hash())
                         doc_id = (document.metadata or {}).get("source") or str(hash(document.text))
 
                         # Load existing cache
