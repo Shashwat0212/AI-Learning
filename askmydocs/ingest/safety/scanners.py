@@ -1,5 +1,3 @@
-
-
 from __future__ import annotations
 
 import re
@@ -36,6 +34,11 @@ PROMPT_INJECTION_PATTERNS = [
     re.compile(r"do not follow earlier instructions", re.IGNORECASE),
 ]
 
+# TODO: Combine regex patterns into a single compiled regex to reduce multiple passes over text
+# TODO: Implement incremental scanning based on document diff (scan only changed segments)
+# TODO: Add parallel scanning across categories for improved performance
+# TODO: Add structured location metadata (line number, page number) instead of span indices
+
 
 # ------------------------------
 # Scanner Functions
@@ -49,15 +52,15 @@ def scan_nsfw(text: str) -> list[ScanFinding]:
 
     findings: list[ScanFinding] = []
 
-    lower_text = text.lower()
+    # lower_text = text.lower()
 
     for keyword in NSFW_KEYWORDS:
-        if keyword in lower_text:
+        if keyword in text:
             findings.append(
                 ScanFinding(
                     category="nsfw",
                     severity="medium",
-                    message=f"NSFW keyword detected: {keyword}",
+                    message=f"NSFW keyword detected: {keyword} (location: unknown)",
                 )
             )
 
@@ -77,7 +80,7 @@ def scan_secrets(text: str) -> list[ScanFinding]:
                 ScanFinding(
                     category="secret",
                     severity="high",
-                    message="Possible credential detected",
+                    message=f"Possible credential detected at span {match.start()}-{match.end()}",
                     span=(match.start(), match.end()),
                 )
             )
@@ -98,7 +101,7 @@ def scan_prompt_injection(text: str) -> list[ScanFinding]:
                 ScanFinding(
                     category="prompt_injection",
                     severity="high",
-                    message="Prompt injection pattern detected",
+                    message=f"Prompt injection pattern detected at span {match.start()}-{match.end()}",
                     span=(match.start(), match.end()),
                 )
             )
@@ -116,11 +119,33 @@ def scan_text(text: str) -> SafetyScanResult:
     Run all safety scanners on the given text.
     """
 
-    findings: list[ScanFinding] = []
+    # TODO: If scan fails (high severity), pipeline should skip downstream processing (split/chunk)
 
-    findings.extend(scan_nsfw(text))
-    findings.extend(scan_secrets(text))
-    findings.extend(scan_prompt_injection(text))
+    findings: list[ScanFinding] = []
+    lower_text = text.lower()
+
+    # NSFW scan (medium severity)
+    findings.extend(scan_nsfw(lower_text))
+
+    # Secret scan (high severity, early exit if found)
+    secret_findings = scan_secrets(text)
+    if secret_findings:
+        findings.extend(secret_findings)
+        return SafetyScanResult(
+            findings=findings,
+            category_counts={"secret": len(secret_findings)},
+            risk_score=1.0,
+        )
+
+    # Prompt injection scan (high severity, early exit if found)
+    prompt_findings = scan_prompt_injection(text)
+    if prompt_findings:
+        findings.extend(prompt_findings)
+        return SafetyScanResult(
+            findings=findings,
+            category_counts={"prompt_injection": len(prompt_findings)},
+            risk_score=1.0,
+        )
 
     # Aggregate category counts
     category_counts: dict[str, int] = {}
