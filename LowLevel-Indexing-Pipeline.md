@@ -303,31 +303,213 @@ End of indexing HLD extraction.
 
 ---
 
-## 12) Immediate Implementation Plan
 
-Step 1 — Define interfaces
-• embedder
-• dense index
-• sparse index
-• doc_map
+---
 
-Step 2 — Implement minimal in-memory versions
-• no FAISS yet
-• simple list + cosine similarity
+## 12) Implementation Roadmap
 
-Step 3 — Build indexing pipeline
-• integrate tracing hooks
-• ensure deterministic IDs
+The indexing module will be implemented step-by-step.
 
-Step 4 — Write tests
-• indexing correctness
-• retrieval sanity
-• latency logging
+---
 
-Step 5 — Add benchmarking script
-• build time
-• insert latency
-• search latency
+# Step A — Embedder
+
+File:
+
+```
+index/dense/embeddings.py
+```
+
+Responsibilities:
+
+```
+text → vector
+batch encoding
+consistent vector dimension
+```
+
+---
+
+# Step B — Dense Index Interface
+
+File:
+
+```
+index/dense/base.py
+```
+
+Define:
+
+```
+add(id, vector)
+remove(id)
+search(query_vector, k)
+```
+
+---
+
+# Step C — In-Memory Dense Index
+
+File:
+
+```
+index/dense/in_memory.py
+```
+
+Implement:
+
+```
+vector storage
+cosine similarity search
+top-k retrieval
+```
+
+---
+
+# Step D — Sparse Index Interface
+
+File:
+
+```
+index/sparse/base.py
+```
+
+Define:
+
+```
+add(id, text)
+remove(id)
+search(query, k)
+```
+
+---
+
+# Step E — BM25 (v1 simplified)
+
+File:
+
+```
+index/sparse/bm25.py
+```
+
+Implement:
+
+```
+inverted index
+basic term frequency scoring
+```
+
+---
+
+# Step F — Doc Map
+
+File:
+
+```
+index/store/doc_map.py
+```
+
+Responsibilities:
+
+```
+store(id, chunk)
+get(id)
+delete(id)
+```
+
+---
+
+# Step G — Similarity Utilities
+
+File:
+
+```
+index/utils/similarity.py
+```
+
+Implement:
+
+```
+cosine similarity
+vector normalization
+```
+
+---
+
+# Step H — Indexing Pipeline
+
+File:
+
+```
+index/pipeline.py
+```
+
+Responsibilities:
+
+```
+coordinate indexing stages
+handle batching
+integrate tracing
+support incremental mode
+```
+
+---
+
+# Step I — Incremental Indexing
+
+Files:
+
+```
+index/incremental/index_diff.py
+index/incremental/index_updater.py
+```
+
+Responsibilities:
+
+```
+identify added / removed chunks
+update dense index
+update sparse index
+update doc_map
+```
+
+---
+
+## 13) Definition of Done (Indexing v1)
+
+The module is complete when:
+
+✔ embeddings generated correctly
+
+✔ dense index stores and retrieves vectors
+
+✔ sparse index retrieves based on keywords
+
+✔ doc_map reconstructs chunks accurately
+
+✔ indexing pipeline runs end-to-end
+
+✔ incremental indexing updates correctly
+
+✔ duplicate chunks are not re-indexed
+
+✔ tracing captures indexing latency across stages
+
+✔ batching is implemented for embedding generation
+
+---
+
+## 14) Next Implementation Step
+
+Next code step:
+
+```
+Step A — implement embeddings.py
+```
+
+Then implement the dense index interface, followed by the in-memory index.
+
+---
 
 Embedding Generation
 
