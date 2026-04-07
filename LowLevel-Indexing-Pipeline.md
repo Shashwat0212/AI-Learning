@@ -1,4 +1,4 @@
-# Indexing Pipeline — Extracted HLD
+# Indexing Pipeline — HLD + LLD
 
 This document focuses exclusively on the indexing pipeline (HLD + LLD), which transforms chunks into efficient retrieval-ready structures. The ingestion module is defined separately and provides chunk-level inputs to this pipeline.
 
@@ -31,7 +31,7 @@ Indexing enables:
 Dense Index (Vector Index)
 
 ```
-retrieval/vector_index.py
+index/dense/vector_index.py
 ```
 
 Responsibilities:
@@ -50,7 +50,7 @@ Initial implementation:
 Sparse Index (BM25)
 
 ```
-retrieval/bm25_index.py
+index/sparse/bm25.py
 ```
 
 Responsibilities:
@@ -60,40 +60,19 @@ Responsibilities:
 
 ---
 
-Embedding Generation
-
-Input:
+Chunk ID Strategy
 
 ```
-Chunk.text
+chunk_id = fingerprint (sha256)
 ```
 
-Output:
+Rules:
 
-```
-vector representation
-```
-
-Used by:
-
-• dense index
+• must be deterministic across runs
+• must be shared across dense and sparse index
+• used as primary key in doc_map
 
 ---
-
-Metadata Support
-
-```
-retrieval/metadata_filter.py
-```
-
-Responsibilities:
-
-• filter results based on metadata
-• enable structured retrieval (source, section, etc.)
-
----
-
-## 2.1 Folder Structure
 
 ```
 askmydocs/
@@ -155,6 +134,15 @@ sparse index insertion
 doc_map update (id → chunk)
 ```
 
+Incremental behavior:
+
+```
+if incremental mode:
+  compute diff
+  add new chunks
+  remove stale chunks
+```
+
 • embedding must be batched for efficiency
 • chunk_id must remain deterministic
 
@@ -175,6 +163,8 @@ for chunk in chunks:
 ```
 
 • doc_map is required to reconstruct chunks after retrieval
+
+• doc_map is the source of truth for reconstructing chunks
 
 ---
 
@@ -273,6 +263,7 @@ Indexing must:
 • maintain consistent IDs across runs
 • indexing must align with ingestion incremental mode (reuse fingerprints)
 • avoid duplicate vector insertions
+• skip insertion if fingerprint already exists (deduplication)
 
 ---
 
@@ -283,7 +274,6 @@ Indexing must:
 • embedding generation
 • benchmark script
 
-• metadata filtering
 • hybrid retrieval compatibility
 
 ---
@@ -338,3 +328,23 @@ Step 5 — Add benchmarking script
 • build time
 • insert latency
 • search latency
+
+Embedding Generation
+
+Input:
+
+```
+Chunk.text
+```
+
+Output:
+
+```
+vector representation
+```
+
+Used by:
+
+• dense index
+
+Embedding MUST be batched to avoid per-chunk overhead.
