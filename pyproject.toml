@@ -3,7 +3,9 @@ name = "askmydocs"
 version = "0.1.0"
 description = "Stage-level SLA measurement and tracing system"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "sentence-transformers>=2.2"
+]
 
 [project.optional-dependencies]
 dev = [
